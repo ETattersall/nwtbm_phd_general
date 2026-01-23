@@ -47,16 +47,16 @@ sk.boun <- vect("data/NWT_GIS_Data/Sambaa_Ke_protected_area.shp")
 
 
 crs(nwt.boun, proj = TRUE)
-crs(sk.boun, proj = TRUE) ## both are NAD 83 - will need to be transformed to WGS 84 for leaflet
+crs(sk.boun, proj = TRUE) ## both are NAD 83
 
 
-## Converting to sf objects in WGS 84 for leaflet
+## Converting to sf objects for leaflet
 nwt_sf <- nwt.boun %>% st_as_sf() %>% 
-          st_transform(crs = 4326)
+          st_transform(crs = 3573) # in Canada Atlas Lambert (for wider Canada projection)
 sk_sf <- sk.boun %>% st_as_sf() %>% 
-         st_transform(crs = 4326)
+         st_transform(crs = 4326) # in WGS 84
 
-crs(nwt_sf)
+crs(nwt_sf, proj = TRUE)
 st_bbox(nwt_sf)
 crs(sk_sf)
 st_bbox(sk_sf)
@@ -96,5 +96,40 @@ gg_map <- ggplot() +
 
 gg_map
 
-### Add NWT inset with sk_sf bounding box -- see last co-pilot conversation and test that code
+#### Add NWT inset with sk_sf bounding box
 
+## Create bounding box for Sambaa K'e
+sk_bbox <- st_as_sfc(st_bbox(sk_sf)) %>%
+  st_set_crs(st_crs(sk_sf)) %>%
+  st_transform(crs = st_crs(nwt_sf)) # transform to NWT crs (Canada Atlas Lambert) for plotting
+
+crs(sk_bbox, proj = TRUE)
+
+## Inset map of NWT with Sambaa K'e bounding box
+gg_inset <- ggplot() +
+  geom_sf(data = nwt_sf, fill = "lightgreen", color = "black") + # NWT boundary
+  geom_sf(data = sk_bbox, fill = NA, color = "darkred", linewidth = 1) + # Sambaa K'e bounding box
+  theme_void() +
+  theme(panel.background = element_rect(fill = "white"))
+
+gg_inset
+
+
+
+### Combine main map and inset using cowplot
+## Really just playing with the left, bottom, right, top numbers until I have a position I'm happy with (function info says these are in npc units?)
+
+sk_map <- 
+  gg_map +
+  inset_element(
+    gg_inset,
+    left   = 0.8,  # presumably left edge of inset?
+    bottom = 0,  # 
+    right  = 1,  # flush with right side of plot
+    top    = 1.61,  # moving vertically (flush with top of plot - incremental adjustments make big diff. in latitude!)
+    align_to = "panel")
+
+sk_map
+
+##Save map
+ggsave("figures/SambaaKemap_PA_NWTinset_20260123.png", plot = sk_map, width = 10, height = 8, dpi = 600)
