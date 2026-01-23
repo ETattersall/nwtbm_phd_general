@@ -61,6 +61,10 @@ st_bbox(nwt_sf)
 crs(sk_sf)
 st_bbox(sk_sf)
 
+## Add a buffer of a degree of longitude and 0.5 degree of latitude around Sambaa K'e for basemap extent
+sk_sf_buffer <- st_as_sfc(st_bbox(sk_sf) + c(-1, -0.5, 1, 0.5)) %>%
+  st_set_crs(st_crs(sk_sf))
+
 ## Create sf point object for Sambaa K'e community, coordinates at: 60.44250 N, -121.24528 W
 sk_point <- st_as_sf(data.frame(name = "Sambaa K'e",
                                    lat = 60.44250,
@@ -72,7 +76,7 @@ sk_point <- st_as_sf(data.frame(name = "Sambaa K'e",
 
 
 # Get ESRI basemap (e.g., "World_Imagery" or "World_Topo_Map")
-basemap <- get_tiles(nwt_sf, provider = "Esri.WorldImagery", crop = TRUE, zoom = 8) # NWT boundary polygon used to get extent of basemap, zoom level can be adjusted
+basemap <- get_tiles(sk_sf_buffer, provider = "Esri.WorldImagery", crop = TRUE, zoom = 8) 
 # note: higher resolution base imagery takes longer to download and display
 
 win.graph() # open separate graphics window
@@ -86,10 +90,17 @@ gg_map <- ggplot() +
     aes(label = "Sambaa K’e"),
     nudge_x = 0.30,     # degrees of longitude (adjust as needed)
     nudge_y = 0.05,     # degrees of latitude (adjust as needed)
-    size = 4.5,
+    size = 5,
     color = "white") +
   labs(x = "Longitude",
        y = "Latitude") +
+  # increase label sizes for axes titles and text
+  theme(
+    axis.title.x = element_text(size = 20),
+    axis.title.y = element_text(size = 20),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16)
+  ) +
   scale_y_continuous(limits = c(60,61.5)) + # set latitude range
   scale_x_continuous(limits = c(-123,-119)) + # set longitude range
   theme_classic()
