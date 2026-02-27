@@ -157,7 +157,7 @@ crs(sk_bbox, proj = TRUE)
 
 ## Inset map of NWT with Sambaa K'e bounding box
 gg_inset <- ggplot() +
-  geom_sf(data = nwt_sf, fill = "lightgreen", color = "black") + # NWT boundary
+  geom_sf(data = nwt_sf, fill = "white", color = "black") + # NWT boundary
   geom_sf(data = sk_bbox, fill = NA, color = "darkred", linewidth = 1) + # Sambaa K'e bounding box
   theme_void() +
   theme(panel.background = element_rect(fill = "white"))
