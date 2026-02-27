@@ -135,14 +135,14 @@ gg_map <- ggplot() +
     color = "black") +
   labs(x = "Longitude",
        y = "Latitude") +
+  theme_classic() +
   # increase label sizes for axes titles and text
   theme(
-    axis.title.x = element_text(size = 24),
-    axis.title.y = element_text(size = 24),
-    axis.text.x = element_text(size = 20),
-    axis.text.y = element_text(size = 20)
-  ) +
-  theme_classic()
+    axis.title.x = element_text(size = 20),
+    axis.title.y = element_text(size = 20),
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13)
+  )
 
 gg_map
 
