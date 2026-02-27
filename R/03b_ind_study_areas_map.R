@@ -18,10 +18,12 @@ x <- c("sf",
        "ggmap",
        "raster",
        "ggspatial",
+       "ggrepel",
        "cowplot",
        "leaflet",
        "terra", 
-       "maptiles", 
+       "maptiles",
+       "mapedit",
        "ggplot2", 
        "tidyterra", 
        "ggspatial",
@@ -49,12 +51,24 @@ sk.boun <- vect("data/NWT_GIS_Data/Sambaa_Ke_protected_area.shp")
 crs(nwt.boun, proj = TRUE)
 crs(sk.boun, proj = TRUE) ## both are NAD 83
 
+## Load in NWT water bodies to include in map
+nwt.water <- vect("data/NWT_GIS_Data/NWT_water.shp")
+crs(nwt.water)
 
-## Converting to sf objects for leaflet
+## Load in NWT roads (should include SK winter road)
+nwt.roads <- vect("data/NWT_GIS_Data/NWT_roads.shp")
+crs(nwt.roads)
+
+
+## Converting to sf objects for leaflet, all in Canada Atlas Lambert projection
 nwt_sf <- nwt.boun %>% st_as_sf() %>% 
-          st_transform(crs = 3573) # in Canada Atlas Lambert (for wider Canada projection)
+          st_transform(crs = 3573) 
 sk_sf <- sk.boun %>% st_as_sf() %>% 
-         st_transform(crs = 4326) # in WGS 84
+         st_transform(crs = 3573)
+water_sf <- nwt.water %>% st_as_sf() %>% 
+            st_transform(crs = 3573)
+roads_sf <- nwt.roads %>% st_as_sf() %>% 
+            st_transform(crs = 3573)
 
 crs(nwt_sf, proj = TRUE)
 st_bbox(nwt_sf)
@@ -65,6 +79,25 @@ st_bbox(sk_sf)
 sk_sf_buffer <- st_as_sfc(st_bbox(sk_sf) + c(-1, -0.5, 1, 0.5)) %>%
   st_set_crs(st_crs(sk_sf))
 
+## Crop water to sk_sf_buffer extent for plotting
+sk_water <- st_intersection(water_sf, sk_sf_buffer)
+plot(sk_water)
+
+## Crop roads to sk_sf_buffer extent for plotting
+sk_roads <- st_intersection(roads_sf, sk_sf_buffer)
+plot(sk_roads) 
+summary(sk_roads) ## more lines than expected (89 observations)... I only want the winter road. 2 features are named HWY, try filtering for those
+sk_roads$TYPE ## only 2 features have names, and they are both HWY. Filter for those
+sk_hwy <- sk_roads %>% filter(TYPE == "HWY")
+plot(sk_hwy) # nope, this is Hwy 1 to Ft Simpson
+class(sk_roads)
+
+## use selectFeatures function from mapedit to interactively select the winter road feature
+sk_winter_road <- sk_roads %>% 
+  selectFeatures() # click on the winter road feature in the plot that opens (it's a line so cursor has to be precise)
+plot(sk_winter_road)
+
+
 ## Create sf point object for Sambaa K'e community, coordinates at: 60.44250 N, -121.24528 W
 sk_point <- st_as_sf(data.frame(name = "Sambaa K'e",
                                    lat = 60.44250,
@@ -72,37 +105,43 @@ sk_point <- st_as_sf(data.frame(name = "Sambaa K'e",
                          coords = c("lon", "lat"),
                          crs = 4326)
 
+## Manually set position of Sambaa K'e label
+sk_point_label <- st_transform(sk_point) %>%  
+  st_geometry() %>% 
+  `+`(c(0.15, -0.02))  # shift label slightly right and down
+
+st_crs(sk_point_label, proj = TRUE) # check crs of label geometry
+st_crs(sk_point_label) <- 4326
+
 ### Map with ggplot2 and ggspatial 
 
 
-# Get ESRI basemap (e.g., "World_Imagery" or "World_Topo_Map")
-basemap <- get_tiles(sk_sf_buffer, provider = "Esri.WorldImagery", crop = TRUE, zoom = 8) 
+# NOT USING: Get ESRI basemap (e.g., "World_Imagery" or "World_Topo_Map")
+## basemap <- get_tiles(sk_sf_buffer, provider = "Esri.WorldImagery", crop = TRUE, zoom = 8) 
 # note: higher resolution base imagery takes longer to download and display
 
 win.graph() # open separate graphics window
 gg_map <- ggplot() +
-  layer_spatial(basemap) + # add basemap
+  # layer_spatial(basemap) + # add basemap
+  geom_sf(data = sk_water, fill = "blue3", color = "blue3") + # water bodies
+  geom_sf(data = sk_winter_road, linewidth = 1, color = "gray50") + # roads
   geom_sf(data = sk_sf, fill = NA, linewidth = 2, color = "black") + # Sambaa K'e candidate protected area boundary
-  geom_sf(data = sk_point, color = "yellow3", size = 3, show.legend = FALSE) + # Sambaa K'e community point
+  geom_sf(data = sk_point, color = "red3", size = 3, show.legend = FALSE) + # Sambaa K'e community point
   # Add the label slightly offset to the right and a touch up
   geom_sf_text(
-    data = sk_point,
-    aes(label = "Sambaa K’e"),
-    nudge_x = 0.30,     # degrees of longitude (adjust as needed)
-    nudge_y = 0.05,     # degrees of latitude (adjust as needed)
+    data = st_set_geometry(sk_point, sk_point_label),
+    aes(label = "Sambaa K'e"), 
     size = 5,
-    color = "white") +
+    color = "black") +
   labs(x = "Longitude",
        y = "Latitude") +
   # increase label sizes for axes titles and text
   theme(
-    axis.title.x = element_text(size = 20),
-    axis.title.y = element_text(size = 20),
-    axis.text.x = element_text(size = 16),
-    axis.text.y = element_text(size = 16)
+    axis.title.x = element_text(size = 24),
+    axis.title.y = element_text(size = 24),
+    axis.text.x = element_text(size = 20),
+    axis.text.y = element_text(size = 20)
   ) +
-  scale_y_continuous(limits = c(60,61.5)) + # set latitude range
-  scale_x_continuous(limits = c(-123,-119)) + # set longitude range
   theme_classic()
 
 gg_map
@@ -143,4 +182,4 @@ sk_map <-
 sk_map
 
 ##Save map
-ggsave("figures/SambaaKemap_PA_NWTinset_20260123.png", plot = sk_map, width = 10, height = 8, dpi = 600)
+ggsave("figures/SambaaKemap_PA_NWTinset_20260226.png", plot = sk_map, width = 10, height = 8, dpi = 600)
