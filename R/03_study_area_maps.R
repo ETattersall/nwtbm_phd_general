@@ -37,7 +37,7 @@ lapply(x, require, character.only = TRUE)
 ## set working directory to file with NWT shapefiles
 getwd()
 list.files("data")
-setwd("C:/Users/tatterer.stu/Desktop/nwtbm_phd/data/NWT_GIS_Data")
+setwd("C:/Users/tatterer.stu/Desktop/nwtbm_phd_general/data/NWT_GIS_Data")
 list.files()
 
 ## Load station location shapefile
@@ -60,6 +60,10 @@ crs(nwt.boun, proj = TRUE) ## NAD 83 - will need to be transformed to WGS 84 for
 
 
 st_bbox(nwt.boun) # bounding box of NWT boundary polygon - should be in lat/long degrees, but looks more like UTM
+
+## Save Fort Smith and Norman Wells polygons as shapefiles for future use (since they are currently in KML format)
+writeVector(fs.polygon, "Fort_Smith2022.shp", overwrite = TRUE)
+writeVector(nw.polygon, "Norman_Wells2022.shp", overwrite = TRUE)
 
 #### Sambaa K'e and Dinaga will need to be split up ####
 plot(sk.dn)
@@ -176,8 +180,6 @@ st_bbox(stn_locations_sf) # should be in lat/long degrees --looks good
 # data.map
 
 
-
-
 ### Map with ggplot2 and ggspatial 
 
 
@@ -209,3 +211,45 @@ gg_map
 ## Save map as PNG
 setwd("C:/Users/tatterer.stu/Desktop/nwtbm_phd") # set working directory to save map (though shouldn't save it in git folder - move to 02.DataAnalysis/maps_figures folder)
 ggsave("NWTBM_stations_map_May302025.png", plot = gg_map, width = 10, height = 8, dpi = 300)
+
+
+## Combining all study area polygons into one layer for later variable extraction
+## Should all be in NWT Lambert (EPSG:3580)
+sa_list <- list(tdn.polygon, fs.polygon, sk.polygon, nw.polygon, ede.polygon, gam.polygon)
+class(sa_list[[1]])
+## Convert to sf objects and transform to NWT Lambert
+sa_list_sf <- lapply(sa_list, st_as_sf) # convert to sf objects
+sa_list_3580 <- lapply(sa_list_sf, function(x) st_transform(x, crs = 3580)) # 3580 is NWT Lambert
+
+## Check that all layers have same number of columns and same column names (to avoid issues when combining)
+lapply(sa_list_3580, ncol) # anywhere between 3 - 34 columns
+lapply(sa_list_3580, colnames) # Names vary widely, all have geometry column
+str(sa_list_3580)
+glimpse(sa_list_3580[[6]]) # Gameti doesn't have a name column
+glimpse(sa_list_3580[[1]]) # NAME_IND = "Thaidene Nene", but I don't want spaces
+glimpse(sa_list_3580[[2]]) 
+
+## Add study area column to each sf object in sa_list_3580 with corresponding study area name
+sa_list_3580[[1]]$study_area <- "ThaideneNëné"
+sa_list_3580[[2]]$study_area <- "FortSmith"
+sa_list_3580[[3]]$study_area <- "SambaaK'e"
+sa_list_3580[[4]]$study_area <- "NormanWells"
+sa_list_3580[[5]]$study_area <- "Edéhzhíe"
+sa_list_3580[[6]]$study_area <- "Gameti"
+
+## Keep only the geometry and study_area columns from each sf object in sa_list_3580
+sa_list_3580_std <- lapply(sa_list_3580, function(x) x %>% select(study_area, geometry))
+
+lapply(sa_list_3580_std, colnames)
+class(sa_list_3580_std[[1]])
+glimpse(sa_list_3580_std[[6]])
+glimpse(sa_list_3580_std[[2]])
+
+## Combine all study area polygons into one sf object using rbind
+sa_combined <- do.call(rbind, sa_list_3580_std)
+class(sa_combined) # should be sf object
+plot(sa_combined["study_area"]) # check that all polygons are included and study area names are correct
+
+## Save combined study area polygons for future use
+getwd()
+writeVector(st_as_sf(sa_combined), "NWTBM_all_study_areas.shp", overwrite = TRUE) # save as shapefile
