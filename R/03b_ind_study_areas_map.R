@@ -96,6 +96,12 @@ class(sk_roads)
 sk_winter_road <- sk_roads %>% 
   selectFeatures() # click on the winter road feature in the plot that opens (it's a line so cursor has to be precise)
 plot(sk_winter_road)
+glimpse(sk_winter_road)
+class(sk_winter_road) # sf object
+
+## Save winter road as shapefile for future use (so I don't have to interactively select it again)
+getwd()
+st_write(sk_winter_road, "sambaake_winter_road_shp.shp", delete_layer = TRUE) # overwrite if it already exists
 
 
 ## Create sf point object for Sambaa K'e community, coordinates at: 60.44250 N, -121.24528 W
