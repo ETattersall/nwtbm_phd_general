@@ -252,4 +252,4 @@ plot(sa_combined["study_area"]) # check that all polygons are included and study
 
 ## Save combined study area polygons for future use
 getwd()
-writeVector(st_as_sf(sa_combined), "NWTBM_all_study_areas.shp", overwrite = TRUE) # save as shapefile
+st_write(sa_combined, "NWTBM_all_study_areas.shp", overwrite = TRUE) # save as shapefile
