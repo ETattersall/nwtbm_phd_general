@@ -124,4 +124,7 @@ dep_time_summary <- dep_df %>%
 ## Save deployment data across projects
 write.csv(dep_df, "data/all_projects_deployment_data_20260312.csv")
 
-## still need to add Out of range dates
+## Save dep_time_summary for easy referencing
+write.csv(dep_time_summary, "data/all_projects_dep_period_summary_20260312.csv")
+
+## still need to add Out of range dates and calculate survey effort
