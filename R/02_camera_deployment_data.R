@@ -398,4 +398,4 @@ dep_df$days_active_within_range <- dep_df$days_active - dep_df$total_oor
 summary(dep_df)
 
 ## Manually confirm cameras if days_active_within_range < 50
-inactive_50 <- dep_df[dep_df$days_active_within_range < 50, ]
+inactive_50 <- dep_df[dep_df$days_active_within_range < 50, ] ## too many have low active days, need to confirm OOR intervals were calculated correctly above
