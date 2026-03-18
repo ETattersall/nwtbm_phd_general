@@ -263,49 +263,139 @@ max(tdn_check$end_date)
 tdn_check$location[tdn_check$end_date == "2023-07-10"] # BIO-TDN-29-02 - true, it was deployed until 2023
 
 ## Now I want to add the out of range dates to each location
+
+## Split image_date_time into a separate date column
+glimpse(img_df)
+class(img_df$image_date_time)
+img_df$image_date <- as.Date(img_df$image_date_time, format = "%Y-%m-%d")
+glimpse(img_df)
+
+oor_tl <- img_df %>%
+  # keep only OOR time-lapse images
+  filter(image_fov == "OOR",
+         image_trigger_mode == "Time Lapse")
+
+
 ## Filter for out of range images in img_df and sort them into distinct intervals per location
 oor_intervals <- img_df %>%
-  filter(image_fov == "OOR") %>% # filter for OOR
-  filter(image_trigger_mode == "Time Lapse") %>% # also filter for timelapse, so there is only one OOR per day
-  arrange(study_area, location, image_date_time) %>% ## select only relevant columns
-  group_by(study_area, location) %>% 
+  # keep only OOR time-lapse images
+  filter(image_fov == "OOR",
+         image_trigger_mode == "Time Lapse") %>%
+  
+  # ensure we are working with a Date
+  mutate(oor_date = as.Date(image_date)) %>%
+  
+  arrange(study_area, location, oor_date) %>%
+  group_by(study_area, location) %>%
+  
+  # group consecutive days: same value => same run
   mutate(
-    # TRUE when this row starts a new interval
-    new_interval = image_date_time - lag(image_date_time) > 0, #new interval started when there is at least a day between OOR images
-    new_interval = if_else(is.na(new_interval), TRUE, new_interval),
-    
-    # rleid assigns a unique ID to each run of TRUE/FALSE
-    interval_id = rleid(new_interval)
+    consec_group = as.integer(oor_date) - row_number()
   ) %>%
-  group_by(study_area, location, interval_id) %>%
+  
+  group_by(study_area, location, consec_group) %>%
   summarise(
-    interval_start = min(image_date_time),
-    interval_end   = max(image_date_time),
-    n_images       = n(),
+    oor_start = min(oor_date),
+    oor_end   = max(oor_date),
     .groups = "drop"
-  )
+  ) %>%
+  
+  arrange(study_area, location, oor_start, oor_end)
 
+
+
+glimpse(oor_intervals)
 summary(oor_intervals)
+
 
 ## Convert to a df with one row per location and multiple OOR intervals (if applicable)
 oor_wide <- oor_intervals %>%
-  arrange(study_area, location, interval_start) %>%
   group_by(study_area, location) %>%
   mutate(interval_num = row_number()) %>% # number intervals per location
   ungroup() %>%
   pivot_wider(
     id_cols = c(study_area, location),
     names_from = interval_num, #generate interval number
-    values_from = c(interval_start, interval_end),
+    values_from = c(oor_start, oor_end),
     names_glue = "{.value}_{interval_num}" ## add interval number to interval_start and _end
-  ) %>% 
-  select(study_area, location, interval_start_1, interval_end_1, interval_start_2, interval_end_2, interval_start_3, interval_end_3) #reorder so start and end times are together
+  )
+
+## Re-order so start and end of same interval are together
+oor_wide <- oor_wide %>%
+  # extract interval numbers from column names
+  {
+    interval_nums <- names(.) %>%
+      str_extract("^oor_start_(\\d+)$") %>%
+      str_extract("\\d+") %>%
+      na.omit() %>%
+      as.integer() %>%
+      sort()
+    
+    # build desired column order: start_1, end_1, start_2, end_2, ...
+    interval_cols <- unlist(
+      lapply(interval_nums, function(i) {
+        c(paste0("oor_start_", i),
+          paste0("oor_end_", i))
+      })
+    )
+    
+    # select in the correct order
+    select(., study_area, location, all_of(interval_cols))
+  }
 
 
+glimpse(oor_wide) ## 17 separate OOR intervals
+
+
+
+## Checking locations with multiple intervals
+## ENWA-O-24-4 has non-noon timelapse images after bear moves camera, which mixes up the intervals. Fix manually to one continuous OOR interval
+oor_wide[oor_wide$location == "ENWA-O-24-4", "oor_end_1"] <- as.Date("2022-10-21")
+## Revise other OOR intervals to NA
+
+# Identify the columns from oor_start_2 through oor_end_5
+cols_to_na <- names(oor_wide)[
+  match("oor_start_2", names(oor_wide)) :
+    match("oor_end_5",   names(oor_wide))
+]
+
+# Set them to NA for the target location
+oor_wide[oor_wide$location == "ENWA-O-24-4", cols_to_na] <- NA
+
+###### REVISED UP TO HERE - keep checking locations with LOTS of OOR intervals ###
+
+## BMS-NRA-050-16 has 2 OOR intervals, but not parsed as shown here for some reason. Revise manually:
+oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_end_1"] <- as.POSIXct("2023-03-20 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC") # specify UTC time zone so it doesn't automatically correct
+oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_start_2"] <- as.POSIXct("2023-04-23 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_end_2"] <- as.POSIXct("2023-04-27 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+
+summary(oor_wide)
+summary(oor_wide$interval_start_2)
 
 ## Add oor_wide intervals to dep_df with left_join
 dep_df <- dep_df %>% left_join(oor_wide, by = c("study_area", "location"))
 
 
 ## Still need to adjust days_active with OOR days, and update daily_lookup/row_lookup, camera activity plots, etc
+glimpse(dep_df)
 
+
+### Calculate the total number of OOR days per location
+int1_days <- interval(dep_df$interval_start_1, dep_df$interval_end_1)/ddays(1)
+int2_days <- interval(dep_df$interval_start_2, dep_df$interval_end_2)/ddays(1)
+inactive_intervals <- cbind.data.frame(int1_days, int2_days)
+inactive_intervals$total_inactive <- rowSums(inactive_intervals, na.rm = TRUE)
+
+summary(inactive_intervals)
+## Add to dep_df
+dep_df$total_oor <- inactive_intervals$total_inactive
+glimpse(dep_df)
+
+
+## Add total active days, considering oor days
+dep_df$days_active_within_range <- dep_df$days_active - dep_df$total_oor
+
+summary(dep_df)
+
+## Manually confirm cameras if days_active_within_range < 50
+inactive_50 <- dep_df[dep_df$days_active_within_range < 50, ]
