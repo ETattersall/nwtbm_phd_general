@@ -129,6 +129,9 @@ dep_time_summary <- dep_df %>%
             image_set_end_date_time = max(image_set_end_date_time))
 
 ## Earliest Edehzhie date doesn't look right (2020-01-01) - ENWA-O-9-2. Deployment data shows camera deployed Nov 8 2021 at 10:57. Retrieved on Nov 6 2022 at 10:33
+## Manual checks also show that ENWA-O-3-2 and ENWA-O-3-3 were also turned on early
+## ENWA-O-3-2 start date: 2021-11-06 15:32:24
+## ENWA-O-3-3 start date: 2021-11-06 15:12:52
 ## Similarly, earliest TDN date is (2021-03-03) - should be 2021-08-28
 
 
@@ -142,8 +145,11 @@ dep_df <- dep_df %>%
       location == "BMS-CRU-004-01",
       ymd_hms("2021-08-28 12:00:00"), if_else(
         location == "ENWA-O-9-2",
-        ymd_hms("2021-11-08 10:57:00"),
-      image_set_start_date_time))) %>% 
+        ymd_hms("2021-11-08 10:57:00"), if_else(
+        location == "ENWA-O-3-2",
+        ymd_hms("2021-11-06 15:32:24"), if_else(
+          location == "ENWA-O-3-3",
+          ymd_hms("2021-11-06 15:12:52"), image_set_start_date_time))))) %>% 
   mutate(
     image_set_end_date_time = if_else(
       location == "ENWA-O-9-2",
