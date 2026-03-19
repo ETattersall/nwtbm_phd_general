@@ -15,6 +15,7 @@ x <- c("sf",
        "ggspatial",
        "wildrtrax",
        "tidyverse",
+       "lubridate",
        "data.table",
        "plotly")
 
@@ -368,40 +369,197 @@ cols_to_na <- names(oor_wide)[
 # Set them to NA for the target location
 oor_wide[oor_wide$location == "ENWA-O-24-4", cols_to_na] <- NA
 
-###### REVISED UP TO HERE - keep checking locations with LOTS of OOR intervals ###
+###### REVISED UP TO HERE - keep checking locations with LOTS of OOR intervals? Skip manual check for now (Mar 19 2026) ###
 
-## BMS-NRA-050-16 has 2 OOR intervals, but not parsed as shown here for some reason. Revise manually:
-oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_end_1"] <- as.POSIXct("2023-03-20 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC") # specify UTC time zone so it doesn't automatically correct
-oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_start_2"] <- as.POSIXct("2023-04-23 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
-oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_end_2"] <- as.POSIXct("2023-04-27 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# ## BMS-NRA-050-16 has 2 OOR intervals, but not parsed as shown here for some reason. Revise manually:
+# oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_end_1"] <- as.POSIXct("2023-03-20 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC") # specify UTC time zone so it doesn't automatically correct
+# oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_start_2"] <- as.POSIXct("2023-04-23 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# oor_wide[oor_wide$location == "BMS-NRA-050-16", "interval_end_2"] <- as.POSIXct("2023-04-27 12:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 
 summary(oor_wide)
 summary(oor_wide$interval_start_2)
 
 ## Add oor_wide intervals to dep_df with left_join
-dep_df <- dep_df %>% left_join(oor_wide, by = c("study_area", "location"))
-
-
-## Still need to adjust days_active with OOR days, and update daily_lookup/row_lookup, camera activity plots, etc
 glimpse(dep_df)
+dep_df_oor <- dep_df %>% left_join(oor_wide, by = c("study_area", "location"))
+
+glimpse(dep_df_oor)
 
 
-### Calculate the total number of OOR days per location
-int1_days <- interval(dep_df$interval_start_1, dep_df$interval_end_1)/ddays(1)
-int2_days <- interval(dep_df$interval_start_2, dep_df$interval_end_2)/ddays(1)
-inactive_intervals <- cbind.data.frame(int1_days, int2_days)
-inactive_intervals$total_inactive <- rowSums(inactive_intervals, na.rm = TRUE)
-
-summary(inactive_intervals)
-## Add to dep_df
-dep_df$total_oor <- inactive_intervals$total_inactive
-glimpse(dep_df)
+### Removing OOR periods from camera activity plot ####
 
 
-## Add total active days, considering oor days
-dep_df$days_active_within_range <- dep_df$days_active - dep_df$total_oor
+# 1. Pivot OOR intervals back into long format
+oor_long <- dep_df_oor %>%
+  pivot_longer(
+    cols = matches("oor_(start|end)_"), # look for any oor_start_n or oor_end_n columns
+    names_to = c(".value", "interval_id"), # turn the value of interest (start/end) and the n (interval_id) into columns
+    names_pattern = "oor_(start|end)_(\\d+)" #name new columns with start, end, and interval (ID'd by \\d+)
+  ) %>%
+  rename(
+     oor_start = start,
+     oor_end   = end
+   ) #%>%
+   #filter(!is.na(oor_start) & !is.na(oor_end)) # removing any NA oor_starts and oor_ends
 
-summary(dep_df)
+length(unique(oor_long$location)) # so only locations with OOR  intervals appear in this dataframe
 
-## Manually confirm cameras if days_active_within_range < 50
-inactive_50 <- dep_df[dep_df$days_active_within_range < 50, ] ## too many have low active days, need to confirm OOR intervals were calculated correctly above
+table(is.na(oor_long$interval_id))
+
+# 2. For each camera deployment, subtract OOR intervals from active interval
+# This function takes:
+# - start:      the camera deployment start time
+# - end:        the camera deployment end time
+# - gaps_df:    a dataframe containing OOR start/end times for that camera
+#
+# It returns a tibble of "in‑range" time intervals that exclude OOR gaps.
+#
+# Example:
+# Deployment: 0 -------------------------- 100
+# OOR gaps:        20---30      50----70
+#
+# Output segments:
+#   0---20   30---50   70---100
+
+make_inrange_segments <- function(start, end, gaps_df) {
+  
+  # ------------------------------------------------------------
+  # 1. If there are NO OOR intervals for this camera:
+  #    Return the full deployment interval unchanged.
+  # ------------------------------------------------------------
+  if (nrow(gaps_df) == 0) {
+    return(tibble(x = start, xend = end))
+  }
+  
+  # ------------------------------------------------------------
+  # 2. Begin with one segment: the full deployment interval.
+  #    As we process each gap, this may be split into multiple segments.
+  # ------------------------------------------------------------
+  segs <- tibble(x = start, xend = end)
+  
+  # ------------------------------------------------------------
+  # 3. Loop through EACH OOR interval for this camera.
+  #    Each gap may split some segments into two pieces.
+  # ------------------------------------------------------------
+  for (i in seq_len(nrow(gaps_df))) {
+    
+    # Extract the ith OOR interval:
+    # g1 = OOR start, g2 = OOR end
+    g1 <- gaps_df$oor_start[i]
+    g2 <- gaps_df$oor_end[i]
+    
+    # ------------------------------------------------------------
+    # 4. Apply this gap to ALL existing segments one by one.
+    #    rowwise() ensures x and xend represent ONE segment at a time.
+    # ------------------------------------------------------------
+    segs <- segs %>%
+      rowwise() %>%
+      do({
+        
+        # Current segment boundaries
+        s <- .$x
+        e <- .$xend
+        
+        # ------------------------------------------------------------
+        # 4a. CASE: Gap does NOT overlap the segment at all.
+        #      Keep the segment unchanged.
+        # ------------------------------------------------------------
+        if (g2 <= s | g1 >= e) {
+          tibble(x = s, xend = e)
+          
+        } else {
+          
+          # ------------------------------------------------------------
+          # 4b. CASE: Gap DOES overlap the segment.
+          #
+          #     Example:
+          #     Segment: 10 ---------------------- 50
+          #     Gap:              25 ---- 35
+          #
+          #     Output segments:
+          #       10 --- 25    and    35 --- 50
+          #
+          #     More edge case handling inside the bounds.
+          # ------------------------------------------------------------
+          
+          tibble(
+            # left piece before the gap
+            x    = c(s, max(g2, s)),
+            # right piece after the gap
+            xend = c(min(g1, e), e)
+          ) %>%
+            # Discard invalid segments (where start >= end)
+            filter(x < xend)
+        }
+        
+      }) %>% 
+      ungroup()
+  }
+  
+  # ------------------------------------------------------------
+  # 5. After all gaps have been processed, segs contains ONLY
+  #    the "in‑range" time intervals. Return that.
+  # ------------------------------------------------------------
+  return(segs)
+}
+
+# 3. Build final table of "in-range" segments
+inrange_df <- dep_df_oor %>%
+  rowwise() %>%
+  mutate(
+    segments = list(
+      make_inrange_segments(
+        start_date, end_date,
+        oor_long %>% filter(.data$location == !!location)
+      )
+    )
+  ) %>%
+  unnest(segments) %>%
+  ungroup()
+
+# 4. Plot with gaps where OOR occurred
+facet_cam_activity <- ggplot(inrange_df) +
+  geom_segment(aes(
+    x = x, xend = xend,
+    y = location, yend = location
+  ), linewidth = 1) +
+  geom_point(aes(x = start_date, y = location), size = 2) +
+  geom_point(aes(x = end_date, y = location), size = 2) +
+  facet_wrap(~ study_area, scales = "free_y") +
+  labs(
+    title = "Camera Activity by Study Area",
+    x = "Date",
+    y = "Location"
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 9)
+  )
+
+facet_cam_activity
+
+
+# ## Still need to adjust days_active with OOR days, and update daily_lookup/row_lookup, camera activity plots, etc
+# glimpse(dep_df)
+# 
+# 
+# ### Calculate the total number of OOR days per location
+# int1_days <- interval(dep_df$interval_start_1, dep_df$interval_end_1)/ddays(1)
+# int2_days <- interval(dep_df$interval_start_2, dep_df$interval_end_2)/ddays(1)
+# inactive_intervals <- cbind.data.frame(int1_days, int2_days)
+# inactive_intervals$total_inactive <- rowSums(inactive_intervals, na.rm = TRUE)
+# 
+# summary(inactive_intervals)
+# ## Add to dep_df
+# dep_df$total_oor <- inactive_intervals$total_inactive
+# glimpse(dep_df)
+# 
+# 
+# ## Add total active days, considering oor days
+# dep_df$days_active_within_range <- dep_df$days_active - dep_df$total_oor
+# 
+# summary(dep_df)
+# 
+# ## Manually confirm cameras if days_active_within_range < 50
+# inactive_50 <- dep_df[dep_df$days_active_within_range < 50, ] ## too many have low active days, need to confirm OOR intervals were calculated correctly above
