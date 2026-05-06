@@ -174,6 +174,7 @@ all_locs <- all_locs %>%
   summarise(sensor_type = paste(unique(sensor_type), collapse = "_")) %>%  # Combine sensor types into a single string
   ungroup()
 
+
 ## Rearrange all_locs to order by study_area and location
 all_locs <- all_locs %>%
   arrange(study_area, location)
@@ -188,7 +189,7 @@ table(all_locs$study_area) ## most study areas have duplicate locations (more li
 table(all_locs$sensor_type) ## Merged 268 stations with matching study_area, location, latitude, and longitude. I don't think that many stations were aru or camera only, indicating discrepancies
 
 #### Fix naming discrepancies, one study area at a time. Save Gameti for last since Brad et al. were working on that one ####
-##### 1. Edehzhie ####
+## 1. Edehzhie
 ede_all_locs <- all_locs %>% filter(study_area == "Edéhzhíe") %>%
   arrange(sensor_type, location) ## arrange stations by sensors, then by location
 
@@ -233,7 +234,7 @@ rm(ede_all_locs)
 ## Sensor types at each location do not match what is indicated in the google drive for what was deployed or uploaded. Noting issues in data/station_data_alignment_20260421.xlsx
 
 
-#### 2. Fort Smith ####
+## 2. Fort Smith
 fs_all_locs <-   all_locs %>% filter(study_area == "FortSmith") %>%
   arrange(sensor_type, location) ## arrange stations by sensors, then by location
 
@@ -371,7 +372,7 @@ table(fs_all_locs3$sensor_type)
 fs_locs <- fs_all_locs3
 rm(fs_all_locs, fs_all_locs2, fs_all_locs3, dup_fs)
 
-##### 3. Norman Wells ####
+##### 3. Norman Wells
 nw_all_locs <-   all_locs %>% filter(study_area == "NormanWells") %>%
   arrange(sensor_type, location) ## arrange stations by sensors, then by location
 
@@ -500,7 +501,7 @@ nw_loc_names$study_area <- rep("NormanWells", nrow(nw_loc_names))
 ## Clean up temporary NW dfs (keep only nw_locs and nw_loc_names)
 rm(df_nw_other, df_nws, nw_all_locs, nw_all_locs2, nw_locs_fixed)
 
-##### 4. Sambaa K'e ####
+##### 4. Sambaa K'e
 sk_all_locs <- all_locs %>% filter(study_area == "SambaaK'e") %>%
   arrange(location, sensor_type) ## arrange stations by location, then sensor type
 
@@ -585,7 +586,6 @@ length(unique(sk_locs$location)) #88 - no duplicates
 
 ## Clean up all files except sk_locs and sk_loc_names
 rm(df_sk,dup_sk, sk_all_locs, sk_all_locs2, sk_locs_fixed)
-
 
 #### 5. Thaidene Nene ####
 tdn_all_locs <- all_locs %>% filter(study_area == "ThaideneNëné") %>%
@@ -773,12 +773,11 @@ gam_cam_locs$sensor_type <- "camera"
 gam_locs <- rbind.data.frame(gam_aru_locs, gam_cam_locs)
 
 
-
-## How many unique stations are in all_locs?
+## How many unique stations are in gam_locs?
 length(unique(gam_locs$location)) ## 142 unique station locations.
 
 
-## Merge all rows in all_locs that have the same study_area, location name, latitude, and longitude.
+## Merge all rows in gam_locs that have the same study_area, location name, latitude, and longitude.
 gam_locs <- gam_locs %>%
   group_by(study_area, location, latitude, longitude) %>%
   arrange(study_area,location, sensor_type) %>% 
