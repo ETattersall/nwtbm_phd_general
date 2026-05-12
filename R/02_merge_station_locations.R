@@ -328,7 +328,7 @@ dup_fs <- fs_all_locs2 %>%
   filter(n() > 1) # Keep only rows with more than one occurrence of the same location
 
 ## Comparing to master files on google drive shows that camera coordinates are correct. Some ARU coords are the originals, not the deployed
-## BMS-TLU-194-027 is slightly off for both, but camera is closer: 60.7432, -110.5469
+## BMS-TLU-194-027 is slightly off for both, but camera is closer: 60.64732, -110.5469
 ## Fix the ARU coordinates to match the camera coordinates
 dup_fs <- dup_fs %>%
   group_by(location) %>%
@@ -350,7 +350,7 @@ dup_fs <- dup_fs %>%
 
 dup_fs <- dup_fs %>%
   mutate(
-    latitude  = if_else(location == "BMS-TLU-194-027", 60.7432, latitude),
+    latitude  = if_else(location == "BMS-TLU-194-027", 60.64732, latitude),
     longitude = if_else(location == "BMS-TLU-194-027", -110.5469, longitude)
   )
 
