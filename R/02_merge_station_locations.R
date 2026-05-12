@@ -15,7 +15,7 @@ x <- c("wildrtrax",
        "data.table",
        "sf")
 
-getwd()
+
 
 ## install.packages(x) ## should already be installed ####
 lapply(x, require, character.only = TRUE)
@@ -913,8 +913,8 @@ nwtbm_stns <- nwtbm_stns %>%
          perl = TRUE) ## uses perl-compatible regex strings
   ))
 
-## Convert nwtbm_stns to shp file, save in NWT Lambert projection (3580)
-nwtbm_stns_sf <- st_as_sf(nwtbm_stns, coords = c("longitude", "latitude"), crs = 3580)
+## Convert nwtbm_stns to shp file
+nwtbm_stns_sf <- st_as_sf(nwtbm_stns, coords = c("longitude", "latitude"), crs = 4326)
 plot(nwtbm_stns_sf["study_area"]) # plot stn locations colored by study area
 
 ## Save as geopackage
@@ -932,8 +932,8 @@ write.csv(cam_stns, "data/sensor_locations/nwtbm_cam_locations_20260506.csv")
 write.csv(aru_stns, "data/sensor_locations/nwtbm_aru_locations_20260506.csv")
 
 ### Convert cam and aru stns to spatial and save as geopackages
-cam_stns_sf <- st_as_sf(cam_stns, coords = c("longitude", "latitude"), crs = 3580)
-aru_stns_sf <- st_as_sf(aru_stns, coords = c("longitude", "latitude"), crs = 3580)
+cam_stns_sf <- st_as_sf(cam_stns, coords = c("longitude", "latitude"), crs = 4326)
+aru_stns_sf <- st_as_sf(aru_stns, coords = c("longitude", "latitude"), crs = 4326)
 
 st_write(cam_stns_sf, "data/sensor_locations/nwtbm_cam_locations_20260506.gpkg", delete_layer = TRUE)
 st_write(aru_stns_sf, "data/sensor_locations/nwtbm_aru_locations_20260506.gpkg", delete_layer = TRUE)
