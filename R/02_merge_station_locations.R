@@ -13,6 +13,7 @@ x <- c("wildrtrax",
        "purrr",
        "tidyverse",
        "data.table",
+       "stringr",
        "sf")
 
 
@@ -232,6 +233,16 @@ ede_locs <- ede_all_locs
 rm(ede_all_locs)
 
 ## Sensor types at each location do not match what is indicated in the google drive for what was deployed or uploaded. Noting issues in data/station_data_alignment_20260421.xlsx
+## Also - cameras are not listed for ENWA sites 08,12,13,14,17, but the camera data had not been processed at time of download
+## Convert these locations to aru_camera
+ede_locs <- ede_locs %>%
+  mutate(
+    sensor_type = if_else(
+      str_detect(location, "^([^\\-]+-){2}(08|12|13|14|17)-"),
+      "aru_camera",
+      sensor_type
+    )
+  )
 
 
 ## 2. Fort Smith
@@ -583,6 +594,10 @@ table(sk_locs$sensor_type) ## 11 stations with both sensors
 ## Check number of unique locations
 length(unique(sk_locs$location)) #88 - no duplicates
 
+## One additional error found when plotting points later - latitude for WR-3-W-041 should be 61.00307
+sk_locs <- sk_locs %>% 
+  mutate(latitude = ifelse(location == "WR-3-W-041", 61.00307, latitude))
+
 
 ## Clean up all files except sk_locs and sk_loc_names
 rm(df_sk,dup_sk, sk_all_locs, sk_all_locs2, sk_locs_fixed)
@@ -899,7 +914,7 @@ nwtbm_stns <- bind_rows(ede_locs,
                         tdn_locs, 
                         gam_locs)
 ## 822 locations - what's sensor break down?
-table(nwtbm_stns$sensor_type) # total of 732 ARUs, 706 cameras, which is correct. 616 paired aru_cameras
+table(nwtbm_stns$sensor_type) # total of 732 ARUs, 730 cameras, which is correct. 640 paired aru_cameras
 
 ## Add a site column - remove last suffix from location name 
 ## applies to all study areas except Sambaa K'e (not clustered, so leave name as is)
@@ -913,9 +928,12 @@ nwtbm_stns <- nwtbm_stns %>%
          perl = TRUE) ## uses perl-compatible regex strings
   ))
 
-## Convert nwtbm_stns to shp file
+## Convert nwtbm_stns to spatial file
 nwtbm_stns_sf <- st_as_sf(nwtbm_stns, coords = c("longitude", "latitude"), crs = 4326)
 plot(nwtbm_stns_sf["study_area"]) # plot stn locations colored by study area
+
+sk_sf <- nwtbm_stns_sf %>% filter(study_area == "SambaaK'e")
+plot(sk_sf) ## plotting error fixed
 
 ## Save as geopackage
 st_write(nwtbm_stns_sf, "data/sensor_locations/nwtbm_allsensor_locations_20260506.gpkg", delete_layer = TRUE)
