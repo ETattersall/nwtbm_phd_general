@@ -244,6 +244,15 @@ ede_locs <- ede_locs %>%
     )
   )
 
+## ENWA-O-26-01 also needs to be counted as a camera station
+ede_locs <- ede_locs %>%
+  mutate(
+    sensor_type = if_else(location == "ENWA-O-26-01",
+      "aru_camera",
+      sensor_type
+    )
+  )
+
 
 ## 2. Fort Smith
 fs_all_locs <-   all_locs %>% filter(study_area == "FortSmith") %>%
@@ -913,6 +922,8 @@ nwtbm_stns <- bind_rows(ede_locs,
                         sk_locs, 
                         tdn_locs, 
                         gam_locs)
+
+
 ## 822 locations - what's sensor break down?
 table(nwtbm_stns$sensor_type) # total of 732 ARUs, 730 cameras, which is correct. 640 paired aru_cameras
 
