@@ -603,10 +603,24 @@ table(sk_locs$sensor_type) ## 11 stations with both sensors
 ## Check number of unique locations
 length(unique(sk_locs$location)) #88 - no duplicates
 
-## One additional error found when plotting points later - latitude for WR-3-W-041 should be 61.00307
+## Additional errors found when plotting points later - latitude for WR-3-W-041 should be 61.00307
 sk_locs <- sk_locs %>% 
   mutate(latitude = ifelse(location == "WR-3-W-041", 61.00307, latitude))
 
+## And camera and aru at 223 are named W and E, respectively. Name them both W (same as deployment datasheet in google drive)
+sk_locs <- sk_locs %>% 
+  mutate(location = ifelse(location == "WR-3-E-223", "WR-3-W-223", location))
+
+## Now merge sensor_types again
+sk_locs <- sk_locs %>% 
+  group_by(study_area, location, latitude, longitude) %>%
+  arrange(study_area,location, sensor_type) %>% 
+  summarise(sensor_type = paste(unique(sensor_type), collapse = "_")) %>%  # Combine sensor types into a single string
+  ungroup()
+
+## Fix in sk_loc_names
+sk_loc_names <- sk_loc_names %>% 
+  mutate(location_std = if_else(location_wt == "WR-3-E-223", "WR-3-W-223", location_std))
 
 ## Clean up all files except sk_locs and sk_loc_names
 rm(df_sk,dup_sk, sk_all_locs, sk_all_locs2, sk_locs_fixed)
@@ -925,7 +939,7 @@ nwtbm_stns <- bind_rows(ede_locs,
 
 
 ## 822 locations - what's sensor break down?
-table(nwtbm_stns$sensor_type) # total of 732 ARUs, 730 cameras, which is correct. 640 paired aru_cameras
+table(nwtbm_stns$sensor_type) # total of 732 ARUs, 731 cameras, which is correct. 642 paired aru_cameras
 
 ## Add a site column - remove last suffix from location name 
 ## applies to all study areas except Sambaa K'e (not clustered, so leave name as is)
