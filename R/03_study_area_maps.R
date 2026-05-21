@@ -34,27 +34,23 @@ x <- c("sf",
 ## install.packages(x) ## should already be installed ####
 lapply(x, require, character.only = TRUE)
 
-## set working directory to file with NWT shapefiles
-getwd()
-list.files("data")
-setwd("C:/Users/tatterer.stu/Desktop/nwtbm_phd_general/data/NWT_GIS_Data")
-list.files()
+## Find folders with NWT shapefiles
+list.files("data/NWT_GIS_Data")
 
 ## Load station location shapefile
-stn_locations <- vect("NWTBM_stations_locations_May302025.shp")
+stn_locations <- st_read("data/sensor_locations/nwtbm_allsensor_locations_20260506.gpkg")
 class(stn_locations)
+glimpse(stn_locations)
 
-# Convert stn_locations to sf object
-stn_locations_sf <- st_as_sf(stn_locations)
 
 #### Load NWT_boundary, Thaidene Nene, SambaaK'e_Dinaga, Gameti shapefiles, Fort Smith, Norman Wells polygons ####
-nwt.boun <- vect("NWT_boundary.shp") 
-tdn.polygon <- vect("ThaideneNene.shp")
-fs.polygon <- vect("FortSmith2022_polygon.kml")
-sk.dn <- vect("SambaaK'e_Dinaga.shp")
-gam.polygon <- vect("Gameti2023.shp")
-nw.polygon <- vect("NormanWells2022_polygon.kml")
-ede.polygon <- vect("Edehzhie.shp")
+nwt.boun <- st_read("data/NWT_GIS_Data/NWT_boundary.shp") 
+tdn.polygon <- st_read("data/NWT_GIS_Data/ThaideneNene.shp")
+fs.polygon <- st_read("data/NWT_GIS_Data/Fort_Smith2022.shp")
+sk.polygon <- st_read("data/NWT_GIS_Data/Sambaa_Ke_protected_area.shp")
+gam.polygon <- st_read("data/NWT_GIS_Data/Gameti2023.shp")
+nw.polygon <- st_read("data/NWT_GIS_Data/Norman_Wells2022.shp")
+ede.polygon <- st_read("data/NWT_GIS_Data/Edehzhie.shp")
 
 crs(nwt.boun, proj = TRUE) ## NAD 83 - will need to be transformed to WGS 84 for leaflet
 
@@ -62,30 +58,29 @@ crs(nwt.boun, proj = TRUE) ## NAD 83 - will need to be transformed to WGS 84 for
 st_bbox(nwt.boun) # bounding box of NWT boundary polygon - should be in lat/long degrees, but looks more like UTM
 
 ## Save Fort Smith and Norman Wells polygons as shapefiles for future use (since they are currently in KML format)
-writeVector(fs.polygon, "Fort_Smith2022.shp", overwrite = TRUE)
-writeVector(nw.polygon, "Norman_Wells2022.shp", overwrite = TRUE)
+# writeVector(fs.polygon, "Fort_Smith2022.shp", overwrite = TRUE)
+# writeVector(nw.polygon, "Norman_Wells2022.shp", overwrite = TRUE)
 
 #### Sambaa K'e and Dinaga will need to be split up ####
-plot(sk.dn)
-sk.dn$Name ##only want Sambaa K'e
-sk.polygon <- sk.dn[sk.dn$Name == "Sambaa K'e"]
-plot(sk.polygon)
+# plot(sk.dn)
+# sk.dn$Name ##only want Sambaa K'e
+# sk.polygon <- sk.dn[sk.dn$Name == "Sambaa K'e"]
+# plot(sk.polygon)
+# 
+# ## Save Sambaa K'e polygon for future use
+# writeVector(sk.polygon, "Sambaa_Ke_protected_area.shp", overwrite = TRUE) # save as shapefile
 
-## Save Sambaa K'e polygon for future use
-writeVector(sk.polygon, "Sambaa_Ke_protected_area.shp", overwrite = TRUE) # save as shapefile
+## Creating a list of all sf polygons
+sf_list <- list(nwt.boun, tdn.polygon, fs.polygon, sk.polygon, nw.polygon, ede.polygon, gam.polygon)
 
-## Converting SpatVect objects to sf objects for leaflet
-vect_list <- list(nwt.boun, tdn.polygon, fs.polygon, sk.polygon, nw.polygon, ede.polygon, gam.polygon)
-vect_list_sf <- lapply(vect_list, st_as_sf) # convert to sf objects
-## Check class
-class(vect_list_sf[[1]]) # should be "sf" "data.frame"
+class(sf_list[[1]]) # should be "sf" "data.frame"
 
 
 ## Check coordinates and CRS
-lapply(vect_list_sf, st_crs) # Fort Smith, Norman Wells, and Gameti are in WGS 84, but others are NAD 83
+lapply(sf_list, st_crs) # Fort Smith, Norman Wells, and Gameti are in WGS 84, but others are NAD 83
 
 ## Transform all to WGS 84
-sf_list_wgs <- lapply(vect_list_sf, function(x) st_transform(x, crs = 4326)) # 4326 is WGS 84
+sf_list_wgs <- lapply(sf_list, function(x) st_transform(x, crs = 4326)) # 4326 is WGS 84
 
 ## Alternatively, this function checks the CRS and transforms if needed (but not if it is already WGS 84)
 
@@ -122,7 +117,7 @@ sf_list_wgs <- lapply(vect_list_sf, function(x) st_transform(x, crs = 4326)) # 4
 
 
 
-# sf_list_wgs2 <- transform_to_wgs84(vect_list_sf) # apply function to list of sf objects
+# sf_list_wgs2 <- transform_to_wgs84(sf_list) # apply function to list of sf objects
 
 ## Check CRS of both sf lists (which should be the same)
 lapply(sf_list_wgs, st_bbox) # should be in lat/long degrees --looks good
@@ -139,8 +134,8 @@ plot(stn_locations, asp = T, las = 1,
 
 
 ## Check CRS for station locations
-st_crs(stn_locations_sf) # should be WGS 84 (EPSG:4326), because I set it that way. Is the range correct?
-st_bbox(stn_locations_sf) # should be in lat/long degrees --looks good
+st_crs(stn_locations) # should be WGS 84 (EPSG:4326), because I set it that way. Is the range correct?
+st_bbox(stn_locations) # should be in lat/long degrees --looks good
 
 
 #### Map polygons and station locations together####
@@ -176,7 +171,7 @@ st_bbox(stn_locations_sf) # should be in lat/long degrees --looks good
 #   addPolygons(data = sf_list_wgs[[4]], fillColor = "none", color = "black") %>% # add Sambaa K'e polygon
 #   addPolygons(data = sf_list_wgs[[5]], fillColor = "none", color = "black") %>% # add Norman Wells polygon
 #   addPolygons(data = sf_list_wgs[[6]], fillColor = "none", color = "black") %>% # add Edehzhie polygon
-#   addCircleMarkers(data = stn_locations_sf, color = "green3", radius = 1, fillOpacity = 1) # add station locations
+#   addCircleMarkers(data = stn_locations, color = "green3", radius = 1, fillOpacity = 1) # add station locations
 # data.map
 
 
@@ -197,7 +192,7 @@ gg_map <- ggplot() +
   geom_sf(data = sf_list_wgs[[5]], fill = NA, linewidth = 2, color = "black") + # Norman Wells polygon
   geom_sf(data = sf_list_wgs[[6]], fill = NA, linewidth = 2, color = "black") + # Edehzhie polygon
   geom_sf(data = sf_list_wgs[[7]], fill = NA, linewidth = 2, color = "black") + # Gameti polygon
-  geom_sf(data = stn_locations_sf, aes(color = area), size = 1.5) + # station locations
+  geom_sf(data = stn_locations, aes(color = study_area), size = 1.5) + # station locations
   #coord_sf() + ## assumes all layers are the same CRS - not needed here because I transformed all to WGS 84
   labs(title = "NWT Station Locations and Study Areas",
        x = "Longitude",
@@ -205,12 +200,20 @@ gg_map <- ggplot() +
        color = "Stations by Study Area") +
   theme(legend.position = "right") +
   scale_y_continuous(limits = c(60,70)) + # set latitude range
-  theme_classic()
+  theme_classic() +
+  # increase label sizes for axes titles and text
+  theme(
+    axis.title.x = element_text(size = 20),
+    axis.title.y = element_text(size = 20),
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+  legend.title= element_text(size = 16),
+  legend.text= element_text(size = 13))
 
 gg_map
+
 ## Save map as PNG
-setwd("C:/Users/tatterer.stu/Desktop/nwtbm_phd") # set working directory to save map (though shouldn't save it in git folder - move to 02.DataAnalysis/maps_figures folder)
-ggsave("NWTBM_stations_map_May302025.png", plot = gg_map, width = 10, height = 8, dpi = 300)
+ggsave("figures/NWTBM_stations_map_May212026.png", plot = gg_map, width = 10, height = 8, dpi = 500)
 
 
 ## Combining all study area polygons into one layer for later variable extraction

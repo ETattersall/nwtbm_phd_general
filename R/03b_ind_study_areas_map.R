@@ -3,7 +3,7 @@
 ## Generating maps for individual study areas containing
 ## Created by Erin Tattersall
 ## January 22 2026
-## If objects are missing, check 01_merge_station_locations.R
+## If objects are missing, check 02_merge_station_locations.R
 ###########################
 
 
