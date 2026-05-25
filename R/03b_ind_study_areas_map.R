@@ -122,23 +122,24 @@ st_crs(sk_point_label) <- 4326
 ### Map with ggplot2 and ggspatial 
 
 
-# NOT USING: Get ESRI basemap (e.g., "World_Imagery" or "World_Topo_Map")
-## basemap <- get_tiles(sk_sf_buffer, provider = "Esri.WorldImagery", crop = TRUE, zoom = 8) 
+# Load basemap (e.g., "World_Imagery" or "World_Topo_Map")
+basemap <- get_tiles(sk_sf_buffer, provider = "Esri.WorldImagery", crop = TRUE, zoom = 8) 
 # note: higher resolution base imagery takes longer to download and display
 
 win.graph() # open separate graphics window
 gg_map <- ggplot() +
-  # layer_spatial(basemap) + # add basemap
-  geom_sf(data = sk_water, fill = "blue3", color = "blue3") + # water bodies
-  geom_sf(data = sk_winter_road, linewidth = 1, color = "gray50") + # roads
-  geom_sf(data = sk_sf, fill = NA, linewidth = 2, color = "black") + # Sambaa K'e candidate protected area boundary
+  layer_spatial(basemap) + # add basemap
+  #geom_sf(data = sk_water, fill = "blue3", color = "blue3") + # water bodies
+  geom_sf(data = sk_winter_road, linewidth = 1, color = "gray50") + # winter road
+  geom_sf(data = sk_hwy, linewidth = 1, color = "gray50") + # winter road
+  #geom_sf(data = sk_sf, fill = NA, linewidth = 2, color = "black") + # Sambaa K'e candidate protected area boundary
   geom_sf(data = sk_point, color = "red3", size = 3, show.legend = FALSE) + # Sambaa K'e community point
   # Add the label slightly offset to the right and a touch up
   geom_sf_text(
     data = st_set_geometry(sk_point, sk_point_label),
     aes(label = "Sambaa K'e"), 
     size = 5,
-    color = "black") +
+    color = "white") +
   labs(x = "Longitude",
        y = "Latitude") +
   theme_classic() +
@@ -163,7 +164,7 @@ crs(sk_bbox, proj = TRUE)
 
 ## Inset map of NWT with Sambaa K'e bounding box
 gg_inset <- ggplot() +
-  geom_sf(data = nwt_sf, fill = "white", color = "black") + # NWT boundary
+  geom_sf(data = nwt_sf, fill = "lightgreen", color = "black") + # NWT boundary
   geom_sf(data = sk_bbox, fill = NA, color = "darkred", linewidth = 1) + # Sambaa K'e bounding box
   theme_void() +
   theme(panel.background = element_rect(fill = "white"))
@@ -188,4 +189,4 @@ sk_map <-
 sk_map
 
 ##Save map
-ggsave("figures/SambaaKemap_PA_NWTinset_20260226.png", plot = sk_map, width = 10, height = 8, dpi = 600)
+ggsave("figures/SambaaKemap_basemap_NWTinset_20260525.png", plot = sk_map, width = 10, height = 8, dpi = 600)
