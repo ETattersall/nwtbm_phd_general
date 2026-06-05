@@ -28,14 +28,15 @@ wt_auth()
 
 
 
-#### Download Station locations from wildtrax - WT downloads not working (Apr 9 - 13 2026) ####
+#### Download Station locations from wildtrax  ####
 # cam_projects <- wt_get_projects(
 #   sensor = "CAM")
 # 
 # glimpse(cam_projects)
-# 
-# 
+#  
 # ## Filter to my target projects only, using project IDs: 712 (Thaidene Nene), 2183 (Fort Smith), 2102 (Norman Wells), 1906 (Sambaa K'e), 2935 (Gameti), 1465 (Edehzhie)
+## Downloading all projects at a time won't work - have to download them in smaller batches
+
 # cam_projects <- cam_projects %>% filter(project_id == "712" |
 #                                           project_id == "2183" |
 #                                           project_id == "2102" |
@@ -253,6 +254,21 @@ ede_locs <- ede_locs %>%
     )
   )
 
+### ENWA-O-17-04 missing from this list (must not have been loaded at time of download)
+## Add to ede_locs and ede_loc_names
+glimpse(ede_loc_names)
+ENWA_17_04_names <- cbind.data.frame("ENWA-O-17-4", "ENWA-O-17-04", "Edéhzhíe")
+colnames(ENWA_17_04_names) <- c("location_wt", "location_std", "study_area")
+ede_loc_names <- ede_loc_names %>% bind_rows(ENWA_17_04_names) %>% 
+  arrange(location_wt) # since it's currently arranged by location_wt
+
+glimpse(ede_locs)
+ENWA_17_04_loc <- cbind.data.frame("Edéhzhíe", "ENWA-O-17-04", 62.05026, -119.85998, "aru_camera")
+colnames(ENWA_17_04_loc) <- c("study_area", "location", "latitude", "longitude", "sensor_type")
+ede_locs <- ede_locs %>% bind_rows(ENWA_17_04_loc) %>% 
+  arrange(location)
+
+rm(ENWA_17_04_loc, ENWA_17_04_names)
 
 ## 2. Fort Smith
 fs_all_locs <-   all_locs %>% filter(study_area == "FortSmith") %>%
@@ -926,6 +942,11 @@ stn_name_lookup <- bind_rows(ede_loc_names,
                              tdn_loc_names, 
                              gam_loc_names)
 
+## Remove duplicate rows
+stn_name_lookup <- distinct(stn_name_lookup)
+
+summary(stn_name_lookup)
+
 ## Save
 write.csv(stn_name_lookup, "data/nwtbm_station_name_lookup_table.csv")
 
@@ -938,8 +959,13 @@ nwtbm_stns <- bind_rows(ede_locs,
                         gam_locs)
 
 
+
 ## 822 locations - what's sensor break down?
-table(nwtbm_stns$sensor_type) # total of 732 ARUs, 731 cameras, which is correct. 642 paired aru_cameras
+table(nwtbm_stns$sensor_type) # total of 733 ARUs, 732 cameras, which is correct. 643 paired aru_cameras
+table(nwtbm_stns$study_area)
+
+summary(nwtbm_stns)
+
 
 ## Add a site column - remove last suffix from location name 
 ## applies to all study areas except Sambaa K'e (not clustered, so leave name as is)
