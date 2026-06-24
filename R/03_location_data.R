@@ -46,6 +46,9 @@ lapply(list.of.packages, require, character.only = TRUE)
 ## Location names and coordinates were aggregated and checked in nwtbm_phd_general/02_merge_station_locations.R
 sensor_locs <- read.csv("data/sensor_locations/nwtbm_allsensor_locations_20260506.csv")
 glimpse(sensor_locs)
+## remove column X
+sensor_locs$X <- NULL
+
 ## Load spatial file
 sensor_locs_sf <- read_sf("data/sensor_locations/nwtbm_allsensor_locations_20260506.gpkg")
 st_crs(sensor_locs_sf) # crs 4326
