@@ -177,7 +177,7 @@ site_fire_data <- sites_500m %>%
   mutate(proportion_burned_500m = ifelse(is.na(proportion_burned_500m), 0, proportion_burned_500m))
 
 glimpse(site_fire_data) ## check that the new columns have been added correctly. sf object with 262 rows and 7 columns (including geometry)
-hist(site_fire_data$proportion_burned_500m) ## bimodal distribution - many sites (>80) with 0 burn, and some up to 100%
+hist(site_fire_data$proportion_burned_500m) ## bimodal distribution - many sites (>150) with 0 burn, and some up to 100%
 summary(site_fire_data) ## 124 NA FireAges (no fires in those sites)
 length(unique(site_fire_data$site)) ## all sites accounted for
 
@@ -236,6 +236,46 @@ site_fire_age <- site_fire_data %>%
 
 ## Save site fire data!!
 write.csv(site_fire_age, "data/nrcan_nbac/nwtbm_sites_fire_prop_age_20260515.csv")
+
+#### Fort Smith sites that burned during deployment (fireage = 1) ####
+fs_fire2023 <- site_fire_age %>%
+  filter(FireAge ==1) ## Only 5 sites
+
+## Find fs_fire2023 sites in multifire (need to determine age and proportion prior to burn date)
+fs_fire2023_sites <- fs_fire2023$site
+
+fs_fire2023_multifires <- multifires %>% filter(site %in% fs_fire2023_sites)
+
+## One site (SRL-324) has multiple fires (1, 9, and 19 years). Prop burned of 9 and 19 years is TINY (0.0004 and 0.0006, respectively). Based on above rule, we pick the most recent (9 year, column 2)
+fs_fire2023_multifires <- fs_fire2023_multifires[2, ]
+
+
+## Add columns to fs_fire2023 for pre2023_fireage and pre2023_propburned
+fs_fire2023$pre2023_FireAge <- rep(NA, nrow(fs_fire2023))
+fs_fire2023$pre2023_proportion_burned_500m <- rep(NA, nrow(fs_fire2023))
+
+## Populate 3 rows in fs_fire2023 pre2023 columns
+# Identify multifire sitess in fs_fire2023 (returns a vector of the position of matches in fs_fire2023)
+idx <- match(fs_fire2023$site, fs_fire2023_multifires$site)
+
+# populate pre2023 columns based on position in idx
+fs_fire2023$pre2023_FireAge <- fs_fire2023_multifires$FireAge[idx]
+fs_fire2023$pre2023_proportion_burned_500m <-
+  fs_fire2023_multifires$proportion_burned_500m[idx]
+
+## Also need date of 2023 fires from fires_500m_cleaned (though this should be determined by camera images, if possible)
+
+fs_2023firedates <- fires_500m_cleaned %>% 
+  filter(site %in% fs_fire2023_sites) %>% 
+  filter(YEAR == 2023)
+## Add AG_SDATE, as a rough indicator
+idz <- match(fs_fire2023$site, fs_2023firedates$site)
+fs_fire2023$fire_sdate2023 <-
+  fs_2023firedates$AG_SDATE[idz]
+
+## Save Fort Smith 2023 fire data
+write.csv(fs_fire2023, "data/nrcan_nbac/FortSmith_2023firedata_sites.csv")
+
 
 ##### Plotting Fire Data ####
 ## Histogram of proportion of burned area within 500m buffers - proportion burned on the x-axis (binned to 0.1 intervals), frequency on the y-axis
