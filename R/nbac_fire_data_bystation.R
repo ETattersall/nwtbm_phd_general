@@ -89,7 +89,7 @@ crs(fires_500m_buffer) # check CRS of fire data within buffers
 
 
 ## Quick summary of fire years represented
-summary(fires_500m_buffer$YEAR) ## 1972-2023, median 2004
+summary(fires_500m_buffer$YEAR) ## 1972-2023, median 1995
 hist(fires_500m_buffer$YEAR) 
 
 
@@ -179,7 +179,7 @@ fires_500m_cleaned <- fires_500m_cleaned %>%
 
 summary(fires_500m_cleaned$proportion_burned_500m)
 str(fires_500m_cleaned$location) ## 470 fire polygons
-length(unique(fires_500m_cleaned$location)) ## 399 unique sites (422 do not have fire data)
+length(unique(fires_500m_cleaned$location)) ## 399 unique sites (423 do not have fire data)
 
 ## add proportion_burned_m2 to stations_500 for 500m buffers, adding a 0 value for locations with no fire history data within the buffer - FireAge should stay NA
 station_fire_data <- stations_500m %>%
@@ -190,9 +190,9 @@ station_fire_data <- stations_500m %>%
   ) %>% 
   mutate(proportion_burned_500m = ifelse(is.na(proportion_burned_500m), 0, proportion_burned_500m))
 
-glimpse(station_fire_data) ## check that the new columns have been added correctly. sf object with 262 rows and 7 columns (including geometry)
+glimpse(station_fire_data) ## check that the new columns have been added correctly. sf object with 893 rows and 7 columns (including geometry)
 hist(station_fire_data$proportion_burned_500m) ## poisson distribution - most fires have low proportions (makes sense, over half are 0)
-summary(station_fire_data) ## 422 NA FireAges (no fires in those stations)
+summary(station_fire_data) ## 423 NA FireAges (no fires in those stations)
 length(unique(station_fire_data$location)) ## all stations accounted for
 
 ### Summarize proportion burned around each station (should add to 1 or less)
@@ -246,10 +246,51 @@ station_fire_age <- station_fire_data %>%
   ) %>%
   ungroup()
 
+summary(station_fire_age) #423 NAs in fireage for stations with no fire
 ## station_fire_age contains propburned and fireage for each station (with 0s and NAs, respectively, for stations with no fire)
 
 ## Save station fire data!!
 write.csv(station_fire_age, "data/nrcan_nbac/nwtbm_stations_fire_prop_age_20260515.csv")
+
+
+### Fort Smith stations that burned during deployment (fireage = 1)
+fs_fire2023 <- station_fire_age %>%
+  filter(FireAge ==1)
+
+## Find fs_fire2023 stations in multifire (need to determine age and proportion prior to burn date)
+fs_fire2023_stations <- fs_fire2023$location
+
+fs_fire2023_multifires <- multifires %>% filter(location %in% fs_fire2023_stations)
+
+## 3 stations have multiple fires: based on rules above, choose age 9 for 324-133 and 19 for the other 2 (rows 2,5, and 7)
+fs_fire2023_multifires <- fs_fire2023_multifires[c(2,5,7), ]
+
+
+## Add columns to fs_fire2023 for pre2023_fireage and pre2023_propburned
+fs_fire2023$pre2023_FireAge <- rep(NA, nrow(fs_fire2023))
+fs_fire2023$pre2023_proportion_burned_500m <- rep(NA, nrow(fs_fire2023))
+
+## Populate 3 rows in fs_fire2023 pre2023 columns
+# Identify multifire locations in fs_fire2023 (returns a vector of the position of matches in fs_fire2023)
+idx <- match(fs_fire2023$location, fs_fire2023_multifires$location)
+
+# populate pre2023 columns based on position in idx
+fs_fire2023$pre2023_FireAge <- fs_fire2023_multifires$FireAge[idx]
+fs_fire2023$pre2023_proportion_burned_500m <-
+  fs_fire2023_multifires$proportion_burned_500m[idx]
+
+## Also need date of 2023 fires from fires_500m_cleaned (though this should be determined by camera images, if possible)
+
+fs_2023firedates <- fires_500m_cleaned %>% 
+  filter(location %in% fs_fire2023_stations) %>% 
+  filter(YEAR == 2023)
+## Add AG_SDATE, as a rough indicator
+idz <- match(fs_fire2023$location, fs_2023firedates$location)
+fs_fire2023$fire_sdate2023 <-
+  fs_2023firedates$AG_SDATE[idz]
+
+## Save Fort Smith 2023 fire data
+write.csv(fs_fire2023, "data/nrcan_nbac/FortSmith_2023firedata.csv")
 
 #### Plotting ####
 ## Histogram of proportion of burned area within 500m buffers - proportion burned on the x-axis (binned to 0.1 intervals), frequency on the y-axis
