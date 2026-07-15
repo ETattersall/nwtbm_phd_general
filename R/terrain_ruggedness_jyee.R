@@ -105,6 +105,14 @@ sites <- as.data.frame(sites_500m) ## keeps spatial geometry, does not contain c
 sites$tri_500m <- tri_sites500m[ ,1]
 
 
+summary(sensors$tri_500m) # values between 0 - 23 m  - indicating a fairly level surface
+hist(sensors$tri_500m) ## distribution skewed towards zero
+
+summary(sites$tri_500m) ## values between 0 - 18 m
+hist(sites$tri_500m) ## still zero skewed (as expected)
+
+## very little variation in TRI overall, likely little ecological significance
+
 ## Save terrain ruggedness in a csv for covariate data (will add other data to this)
 write.csv(sensors, "data/nwtbm_sensor_covariate_data.csv")
 write.csv(sites, "data/nwtbm_sites_covariate_data.csv")
