@@ -253,7 +253,7 @@ summary(station_fire_age) #423 NAs in fireage for stations with no fire
 write.csv(station_fire_age, "data/nrcan_nbac/nwtbm_stations_fire_prop_age_20260515.csv")
 
 
-### Fort Smith stations that burned during deployment (fireage = 1)
+#### Fort Smith stations that burned during deployment (fireage = 1) ####
 fs_fire2023 <- station_fire_age %>%
   filter(FireAge ==1)
 
@@ -290,7 +290,7 @@ fs_fire2023$fire_sdate2023 <-
   fs_2023firedates$AG_SDATE[idz]
 
 ## Save Fort Smith 2023 fire data
-write.csv(fs_fire2023, "data/nrcan_nbac/FortSmith_2023firedata.csv")
+write.csv(fs_fire2023, "data/nrcan_nbac/FortSmith_2023firedata_stations.csv")
 
 #### Plotting ####
 ## Histogram of proportion of burned area within 500m buffers - proportion burned on the x-axis (binned to 0.1 intervals), frequency on the y-axis
