@@ -249,9 +249,27 @@ station_fire_age <- station_fire_data %>%
 summary(station_fire_age) #423 NAs in fireage for stations with no fire
 ## station_fire_age contains propburned and fireage for each station (with 0s and NAs, respectively, for stations with no fire)
 
-## Save station fire data!!
-write.csv(station_fire_age, "data/nrcan_nbac/nwtbm_stations_fire_prop_age_20260515.csv")
+## Remove study_area, sensor_type, site to add to covariate df
+station_fire_age <- station_fire_age |> select(-study_area, -site, -sensor_type)
+glimpse(station_fire_age)
+class(station_fire_age)
 
+# drop geometry
+station_fire_age <- st_drop_geometry(station_fire_age)
+
+glimpse(station_fire_age)
+
+## add to covariate df
+cov_sensors <- read.csv("data/nwtbm_sensor_covariate_data.csv")
+
+glimpse(cov_sensors)
+
+cov_sensors <- cov_sensors |> left_join(station_fire_age, by = "location")
+
+glimpse(cov_sensors)
+
+## Save as covariate data
+write.csv(cov_sensors, "data/nwtbm_sensor_covariate_data.csv")
 
 #### Fort Smith stations that burned during deployment (fireage = 1) ####
 fs_fire2023 <- station_fire_age %>%
