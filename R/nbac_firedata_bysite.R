@@ -234,8 +234,27 @@ site_fire_age <- site_fire_data %>%
     
 ## site_fire_age contains propburned and fireage for each site (with 0s and NAs, respectively, for sites with no fire)
 
-## Save site fire data!!
-write.csv(site_fire_age, "data/nrcan_nbac/nwtbm_sites_fire_prop_age_20260515.csv")
+## Remove study_area, site_area, site_area_sqkm to add to covariate df
+site_fire_age <- site_fire_age |> select(-study_area, -site_area, -site_area_sqkm)
+glimpse(site_fire_age)
+class(site_fire_age)
+
+# drop geometry
+site_fire_age <- st_drop_geometry(site_fire_age)
+
+glimpse(site_fire_age)
+
+## add to covariate df
+cov_site <- read.csv("data/nwtbm_sites_covariate_data.csv")
+
+glimpse(cov_site)
+
+cov_site <- cov_site |> left_join(site_fire_age, by = "site")
+
+glimpse(cov_site)
+
+## Save as covariate data
+write.csv(cov_site, "data/nwtbm_sites_covariate_data.csv")
 
 #### Fort Smith sites that burned during deployment (fireage = 1) ####
 fs_fire2023 <- site_fire_age %>%
