@@ -66,6 +66,7 @@ terrain_data_10z <- retrieve_TRI_rast(10)
 
 plot(terrain_data_6z, main = "Terrain Ruggedness Index (6 zoom)")
 plot(terrain_data_8z, main = "Terrain Ruggedness Index (8 zoom)")
+plot(terrain_data_10z, main = "Terrain Ruggedness Index (10 zoom)")
 
 
 ## writing raster data to tif files
@@ -100,7 +101,8 @@ tri_sites500m <- terra::extract(terrain_data_10z,
                                fun=mean)
 
 ## Save sites_500m as df and add tri data to that
-sites <- as.data.frame(sites_500m) ## keeps spatial geometry, does not contain coordinates
+sites <- as.data.frame(sites_500m) |> 
+  select(-geom) ## remove geometry column for saving as csv
 
 sites$tri_500m <- tri_sites500m[ ,1]
 
@@ -116,3 +118,25 @@ hist(sites$tri_500m) ## still zero skewed (as expected)
 ## Save terrain ruggedness in a csv for covariate data (will add other data to this)
 write.csv(sensors, "data/nwtbm_sensor_covariate_data.csv")
 write.csv(sites, "data/nwtbm_sites_covariate_data.csv")
+
+
+## Extracting zoom 6 and 8 TRI to compare to 10 (just for stns)
+tri_stns_6 <- terra::extract(terrain_data_6z,
+                               stations_500m,
+                               fun=mean)
+
+tri_stns_8 <- terra::extract(terrain_data_8z,
+                             stations_500m,
+                             fun=mean)
+
+hist(tri_stns_6)
+hist(tri_stns_8)
+hist(tri_stns500m)
+class(tri_stns_6)
+
+## Aggregate into df for easier comparison
+tri_zooms <- data.frame(
+  tri_6 = tri_stns_6,
+  tri_8 = tri_stns_8,
+  tri_10 = tri_stns500m)
+summary(tri_zooms) # increasing resolution increases range in TR index - which makes sense because higher resolutions capture more ruggedness
