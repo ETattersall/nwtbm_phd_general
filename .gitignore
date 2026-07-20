@@ -8,3 +8,4 @@ nwtbm_phd_general.Rproj
 wildtrax_login.R
 .positai
 /figures/
+*.RDataTmp
