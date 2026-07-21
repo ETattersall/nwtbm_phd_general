@@ -244,6 +244,9 @@ site_fire_age <- st_drop_geometry(site_fire_age)
 
 glimpse(site_fire_age)
 
+## remove redundant columns
+site_fire_age <- site_fire_age |> select(-study_area, -site_area, -site_area_sqkm)
+
 ## add to covariate df
 cov_site <- read.csv("data/nwtbm_sites_covariate_data.csv")
 
