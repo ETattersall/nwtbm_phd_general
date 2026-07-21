@@ -175,39 +175,11 @@ clim_site <- climate_deps |>
     .groups = "drop"
     )
 
-
-### Save climate data to covariate csvs (created in terrain_ruggedness_jyee.R script)
-sensors <- read.csv("data/nwtbm_sensor_covariate_data.csv")
-sites <- read.csv("data/nwtbm_sites_covariate_data.csv")
-
-
-## Sensor level data (location)
-glimpse(sensors)
-
-##remove X and ...1 column
-sensors <- sensors |> select(-X, -...1)
-glimpse(climate_deps)
-
-climate_deps <- climate_deps |> 
-  select(-study_area, -site, -lon, -lat, -sensor_type) ## remove redundant columns from sensors df
-
-sensors_clim <- sensors |> 
-  left_join(climate_deps, by = "location")
-
-## Site level data
-glimpse(sites)
-
-sites <- sites |> select(-X)
-
-glimpse(clim_site)
-
-sites_clim <- left_join(sites, clim_site, by = "site")
-
 glimpse(sensors_clim)
-
 glimpse(sites_clim)
+sites_clim <- sites_clim |> select(-tri_500m)
 
 
-### Save as covariate CSVs
-write.csv(sensors_clim, "data/nwtbm_sensor_covariate_data.csv")
-write.csv(sites_clim, "data/nwtbm_sites_covariate_data.csv")
+### Save as covariate CSVs - save separate from other covariates because of the temporal aspect of these data. Can add later
+write.csv(sensors_clim, "data/nwtbm_sensor_climate_covariate_data.csv")
+write.csv(sites_clim, "data/nwtbm_sites_climate_covariate_data.csv")

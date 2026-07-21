@@ -115,6 +115,9 @@ hist(sites$tri_500m) ## still zero skewed (as expected)
 
 ## very little variation in TRI overall, likely little ecological significance
 
+glimpse(sensors)
+glimpse(sites)
+
 ## Save terrain ruggedness in a csv for covariate data (will add other data to this)
 write.csv(sensors, "data/nwtbm_sensor_covariate_data.csv")
 write.csv(sites, "data/nwtbm_sites_covariate_data.csv")
