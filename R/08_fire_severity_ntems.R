@@ -209,6 +209,9 @@ minmax(fsev2022_mask)
 global(dNBR2022, range, na.rm = TRUE)
 global(fsev2022_mask, range, na.rm = TRUE)
 hist(values(dNBR2022))
+win.graph()
 hist(values(fsev2022_mask))
+
+## dNBR2022 is normally distributed around 0, fsev is more zero-inflated. Likely that the SPIDER data includes negative spectral values that are all just considered unburned (0) by NTEMS?
 
 ## Emailed James Maltman to ask about converting between these two scales (17 July 2026)
