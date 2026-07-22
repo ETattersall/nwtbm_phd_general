@@ -307,6 +307,9 @@ idz <- match(fs_fire2023$location, fs_2023firedates$location)
 fs_fire2023$fire_sdate2023 <-
   fs_2023firedates$AG_SDATE[idz]
 
+glimpse(fs_fire2023) # need to remove geometry
+fs_fire2023 <- st_drop_geometry(fs_fire2023)
+
 ## Save Fort Smith 2023 fire data
 write.csv(fs_fire2023, "data/nrcan_nbac/FortSmith_2023firedata_stations.csv")
 
