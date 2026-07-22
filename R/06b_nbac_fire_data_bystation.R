@@ -273,7 +273,7 @@ write.csv(cov_sensors, "data/nwtbm_sensor_covariate_data.csv")
 
 #### Fort Smith stations that burned during deployment (fireage = 1) ####
 fs_fire2023 <- station_fire_age %>%
-  filter(FireAge ==1)
+  filter(FireAge == 1)
 
 ## Find fs_fire2023 stations in multifire (need to determine age and proportion prior to burn date)
 fs_fire2023_stations <- fs_fire2023$location
