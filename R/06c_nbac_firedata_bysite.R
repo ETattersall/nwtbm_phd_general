@@ -197,7 +197,7 @@ multifires <- site_fire_data %>%
   ungroup() #37 sites with multiple fires
 
 hist(multifires$proportion_burned_500m, breaks = 10) # 14/37 fires < 0.1 proportion burned
-hist(multifires$FireAge)
+hist(multifires$FireAge, breaks = 100)
 
 ## What is the difference in proportions in sites with multiple fires?
 diff_by_site <- multifires %>%
@@ -261,7 +261,7 @@ write.csv(cov_site, "data/nwtbm_sites_covariate_data.csv")
 
 #### Fort Smith sites that burned during deployment (fireage = 1) ####
 fs_fire2023 <- site_fire_age %>%
-  filter(FireAge ==1) ## Only 5 sites
+  filter(FireAge == 1) ## Only 5 sites
 
 ## Find fs_fire2023 sites in multifire (need to determine age and proportion prior to burn date)
 fs_fire2023_sites <- fs_fire2023$site
@@ -294,6 +294,9 @@ fs_2023firedates <- fires_500m_cleaned %>%
 idz <- match(fs_fire2023$site, fs_2023firedates$site)
 fs_fire2023$fire_sdate2023 <-
   fs_2023firedates$AG_SDATE[idz]
+
+glimpse(fs_fire2023) # need to remove geometry
+fs_fire2023 <- st_drop_geometry(fs_fire2023)
 
 ## Save Fort Smith 2023 fire data
 write.csv(fs_fire2023, "data/nrcan_nbac/FortSmith_2023firedata_sites.csv")
