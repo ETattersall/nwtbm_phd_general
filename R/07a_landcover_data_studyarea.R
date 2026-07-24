@@ -67,6 +67,44 @@ plot(lcc_sa_20[[2]])
 lcc_sa_20[[2]]
 
 
+#### Extract water bodies ####
+## crop lcc to sa_20km (not as a list) to extract water values only
+allsa_20_canlam <- project(sa_20km, crs(lcc))
+
+## Crop lcc to unlisted 20km study area
+allsa_lcc <- mask(crop(lcc, allsa_20_canlam), allsa_20_canlam)
+
+## Extract water bodies only (raster value 18)
+sa_water <- ifel(allsa_lcc == 18, 18, NA)
+plot(sa_water)
+sa_water
+
+## Extract water bodies only (raster value 18) and convert to SpatVector for saving
+sa_water_vect <- water_vect <- as.polygons(allsa_lcc == 18,
+                                           dissolve = TRUE,
+                                           na.rm = TRUE) # na.rm ignores NAs (land), dissolve merges adjacent water cells into a single polygon
+
+sa_water_vect ## Contains both 0 (land) and water (1). Confirm in plot
+## Plot with water raster to confirm correct extraction
+win.graph()
+plot(sa_water_vect[sa_water_vect$Canada2020 == 1, ],
+     col = "lightblue",
+     border = NA)
+
+## Subset for Canada2020 == 1 (water)
+sa_water_vect <- sa_water_vect[sa_water_vect$Canada2020 == 1, ]
+
+sa_water_vect
+plot(sa_water_vect, col = "lightblue", border = NA)
+
+### Save water spatial
+writeVector(sa_water_vect,
+            "data/LCC_2020/nwtbm_study_areas_water_polygons.gpkg",
+            filetype = "GPKG",
+            overwrite = TRUE)
+
+#####
+
 ## Adding LCC attributes from csv (converted the table from pdf to csv manually)
 lcc_atts <- read.csv("data/LCC_2020/ClassIndex_v2.csv") %>% 
   separate_wider_delim(RGB, 
@@ -92,18 +130,18 @@ sa_20km ## EPSG 3580
 
 lcc_sa_20 <- lapply(lcc_sa_20, project, "EPSG:3580", method = "near")
 
-## To use rasters later - Save all rasters in list individually, plus their paths as a list to load them in again
-paths <- vapply(seq_along(lcc_sa_20), function(i) {
-  path <- file.path("data/LCC_2020", paste0("lcc_sa_20_", i, ".tif"))
-  writeRaster(lcc_sa_20[[i]], path, overwrite = TRUE)
-  path
-}, FUN.VALUE = character(1))
-
-saveRDS(paths, "data/LCC_2020/lcc_sa_20_paths.rds")
-
-# Reload
-paths <- readRDS("data/LCC_2020/lcc_sa_20_paths.rds")
-lcc_sa_20 <- lapply(paths, rast)
+# ## To use rasters later - Save all rasters in list individually, plus their paths as a list to load them in again
+# paths <- vapply(seq_along(lcc_sa_20), function(i) {
+#   path <- file.path("data/LCC_2020", paste0("lcc_sa_20_", i, ".tif"))
+#   writeRaster(lcc_sa_20[[i]], path, overwrite = TRUE)
+#   path
+# }, FUN.VALUE = character(1))
+# 
+# saveRDS(paths, "data/LCC_2020/lcc_sa_20_paths.rds")
+# 
+# # Reload
+# paths <- readRDS("data/LCC_2020/lcc_sa_20_paths.rds")
+# lcc_sa_20 <- lapply(paths, rast)
 
 
 #### Raster data cropped to l_sa_poly (i.e., no buffer)
@@ -127,18 +165,18 @@ lcc_sa <- lapply(lcc_sa, function(r) {
 
 lcc_sa <- lapply(lcc_sa, project, "EPSG:3580", method = "near")
 
-## To use rasters later - Save all rasters in list individually, plus their paths as a list to load them in again
-paths_poly <- vapply(seq_along(lcc_sa), function(i) {
-  path <- file.path("data/LCC_2020", paste0("lcc_sa_nobuffer", i, ".tif"))
-  writeRaster(lcc_sa[[i]], path, overwrite = TRUE)
-  path
-}, FUN.VALUE = character(1))
-
-saveRDS(paths_poly, "data/LCC_2020/lcc_sa_paths_poly.rds")
-
-# Reload
-paths_poly <- readRDS("data/LCC_2020/lcc_sa_paths_poly.rds")
-lcc_sa <- lapply(paths_poly, rast)
+# ## To use rasters later - Save all rasters in list individually, plus their paths as a list to load them in again
+# paths_poly <- vapply(seq_along(lcc_sa), function(i) {
+#   path <- file.path("data/LCC_2020", paste0("lcc_sa_nobuffer", i, ".tif"))
+#   writeRaster(lcc_sa[[i]], path, overwrite = TRUE)
+#   path
+# }, FUN.VALUE = character(1))
+# 
+# saveRDS(paths_poly, "data/LCC_2020/lcc_sa_paths_poly.rds")
+# 
+# # Reload
+# paths_poly <- readRDS("data/LCC_2020/lcc_sa_paths_poly.rds")
+# lcc_sa <- lapply(paths_poly, rast)
 
 
 
