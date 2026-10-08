@@ -168,6 +168,8 @@ climate_deps <- ds_data %>%
 
 clim_vars <- names(climate_deps)[12:99]
 
+glimpse(climate_deps)
+
 clim_site <- climate_deps |> 
   group_by(site, PERIOD) |> 
   summarise(
@@ -175,11 +177,11 @@ clim_site <- climate_deps |>
     .groups = "drop"
     )
 
-glimpse(sensors_clim)
-glimpse(sites_clim)
-sites_clim <- sites_clim |> select(-tri_500m)
+
+glimpse(clim_site)
+
 
 
 ### Save as covariate CSVs - save separate from other covariates because of the temporal aspect of these data. Can add later
-write.csv(sensors_clim, "data/nwtbm_sensor_climate_covariate_data.csv")
-write.csv(sites_clim, "data/nwtbm_sites_climate_covariate_data.csv")
+write.csv(climate_deps, "data/nwtbm_sensor_climate_covariate_data.csv")
+write.csv(clim_site, "data/nwtbm_sites_climate_covariate_data.csv")
