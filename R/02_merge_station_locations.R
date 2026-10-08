@@ -53,7 +53,8 @@ wt_auth()
 setwd("C:/Users/tatterer.stu/Desktop/nwtbm_phd_general/data/sensor_locations")
 list.files()
 
-cam_locs <- read.csv("all_projects_cam_locations_20260327.csv")
+cam_locs <- read.csv("all_projects_cam_locations_20260327.csv") # Note (Aug 12 2026: this file was outdated and no longer exists. 
+                                                                ##Any updates to single project names should re-download updated location data from WildTrax to ensure alignment)
 
  
 summary(cam_locs)
