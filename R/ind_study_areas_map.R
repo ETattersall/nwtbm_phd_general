@@ -111,49 +111,80 @@ sk_point <- st_as_sf(data.frame(name = "Sambaa K'e",
                          coords = c("lon", "lat"),
                          crs = 4326)
 
+## Convert both sk_point objects to Canada Atlas Lambert projection
+sk_point <- st_transform(sk_point, crs = 3573)
+
 ## Manually set position of Sambaa K'e label
 sk_point_label <- st_transform(sk_point) %>%  
   st_geometry() %>% 
-  `+`(c(0.15, -0.02))  # shift label slightly right and down
+  `+`(c(3000, -4000))  # shift label slightly right and down (units are in metres)
 
 st_crs(sk_point_label, proj = TRUE) # check crs of label geometry
-st_crs(sk_point_label) <- 4326
+st_crs(sk_point_label) <- 3573
+
+
+
 
 ### Map with ggplot2 and ggspatial 
 
 
 # Load basemap (e.g., "World_Imagery" or "World_Topo_Map")
-basemap <- get_tiles(sk_sf_buffer, provider = "Esri.WorldImagery", crop = TRUE, zoom = 8) 
+# basemap <- get_tiles(sk_sf_buffer, provider = "Esri.WorldImagery", crop = TRUE, zoom = 8) 
 # note: higher resolution base imagery takes longer to download and display
 
 win.graph() # open separate graphics window
 gg_map <- ggplot() +
-  layer_spatial(basemap) + # add basemap
-  #geom_sf(data = sk_water, fill = "blue3", color = "blue3") + # water bodies
+  geom_sf(data = sk_water, fill = "blue3", color = "blue3") + # water bodies
   geom_sf(data = sk_winter_road, linewidth = 1, color = "gray50") + # winter road
   geom_sf(data = sk_hwy, linewidth = 1, color = "gray50") + # winter road
-  #geom_sf(data = sk_sf, fill = NA, linewidth = 2, color = "black") + # Sambaa K'e candidate protected area boundary
+  geom_sf(data = sk_sf, fill = NA, linewidth = 2, color = "black") + # Sambaa K'e candidate protected area boundary
   geom_sf(data = sk_point, color = "red3", size = 3, show.legend = FALSE) + # Sambaa K'e community point
   # Add the label slightly offset to the right and a touch up
   geom_sf_text(
     data = st_set_geometry(sk_point, sk_point_label),
-    aes(label = "Sambaa K'e"), 
+    label = "Sambaa K'e", 
     size = 5,
-    color = "white") +
+    color = "black") +
   labs(x = "Longitude",
        y = "Latitude") +
+  # North arrow
+  annotation_north_arrow(
+    location = "tl",
+    which_north = "true",
+    style = north_arrow_fancy_orienteering(),
+    height = unit(1.5, "cm"),
+    width  = unit(1.5, "cm")
+  ) +
+  
+  # Scale bar
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.3,
+    text_cex = 1.2
+  ) +
+  
   theme_classic() +
-  # increase label sizes for axes titles and text
+  
+  # Remove axes, tick marks, and axis titles
   theme(
-    axis.title.x = element_text(size = 20),
-    axis.title.y = element_text(size = 20),
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 13)
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.line = element_blank()
   )
 
 gg_map
 
+ 
+
 #### Add NWT inset with sk_sf bounding box
+
+## Canada polygon
+list.files("data/NWT_GIS_Data/Canada_boundary")
+can_boun <- st_read("data/NWT_GIS_Data/Canada_boundary/Canada_boundary.shp")
+
+## re-project
+can_boun <- st_transform(can_boun, crs = 3573)
 
 ## Create bounding box for Sambaa K'e
 sk_bbox <- st_as_sfc(st_bbox(sk_sf)) %>%
@@ -162,12 +193,45 @@ sk_bbox <- st_as_sfc(st_bbox(sk_sf)) %>%
 
 crs(sk_bbox, proj = TRUE)
 
-## Inset map of NWT with Sambaa K'e bounding box
+## Create layer of major water bodies (Great Slave, Bear Lake, Mackenzie)
+glimpse(water_sf)
+## Remove water bodies with no name
+name.water <- water_sf |> filter(!is.na(NAME))
+glimpse(name.water)
+unique(name.water$NAME) ## >1000 water bodies, but should see main ones - "Great Slave Lake / Grand lac des Esclaves", "Mackenzie River / Fleuve Mackenzie", "Great Bear Lake / Grand lac de l'Ours"
+
+## Viewing polygons to find the names of all the arms of Great Bear Lake
+selectFeatures(name.water)
+
+major.water <- name.water |> filter(NAME == "Great Slave Lake / Grand lac des Esclaves" | 
+                                    NAME == "Mackenzie River / Fleuve Mackenzie" | 
+                                    NAME == "Great Bear Lake / Grand lac de l'Ours"| 
+                                    NAME == "Keith Arm" |
+                                    NAME == "McVicar Arm"| 
+                                    NAME == "McTavish Arm" |
+                                    NAME == "Dease Arm" |
+                                    NAME == "Smith Arm")
+
+
+## Inset map of NWT with Sambaa K'e bounding box and major water bodies
 gg_inset <- ggplot() +
+  geom_sf(data = can_boun, fill = "white", color = "black") +
   geom_sf(data = nwt_sf, fill = "lightgreen", color = "black") + # NWT boundary
+  geom_sf(data = major.water, fill = "blue", color = "blue") +
   geom_sf(data = sk_bbox, fill = NA, color = "darkred", linewidth = 1) + # Sambaa K'e bounding box
   theme_void() +
-  theme(panel.background = element_rect(fill = "white"))
+  theme(
+    panel.border = element_rect(
+      colour = "black",
+      fill = NA,
+      linewidth = 1
+    ),
+    plot.background = element_rect(
+      colour = "black",
+      fill = "white",
+      linewidth = 1
+    )
+  )
 
 gg_inset
 
@@ -180,13 +244,14 @@ sk_map <-
   gg_map +
   inset_element(
     gg_inset,
-    left   = 0.8,  # presumably left edge of inset?
-    bottom = 0,  # 
-    right  = 1,  # flush with right side of plot
-    top    = 1.61,  # moving vertically (flush with top of plot - incremental adjustments make big diff. in latitude!)
-    align_to = "panel")
+    left   = 0.63,  # presumably left edge of inset?
+    bottom = 0.00,  # 
+    right  = 1.00,  # flush with right side of plot
+    top    = 0.37,  # moving vertically (flush with top of plot - incremental adjustments make big diff. in latitude!)
+    align_to = "panel",
+    clip = FALSE) # make border visible
 
 sk_map
 
 ##Save map
-ggsave("figures/SambaaKemap_basemap_NWTinset_20260525.png", plot = sk_map, width = 10, height = 8, dpi = 600)
+ggsave("figures/SambaaKemap_basemap_NWTinset_20261021.png", plot = sk_map, width = 10, height = 8, dpi = 600)
