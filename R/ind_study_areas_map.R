@@ -152,8 +152,8 @@ gg_map <- ggplot() +
     location = "tl",
     which_north = "true",
     style = north_arrow_fancy_orienteering(),
-    height = unit(1.5, "cm"),
-    width  = unit(1.5, "cm")
+    height = unit(2.5, "cm"),
+    width  = unit(2.5, "cm")
   ) +
   
   # Scale bar
@@ -165,12 +165,17 @@ gg_map <- ggplot() +
   
   theme_classic() +
   
-  # Remove axes, tick marks, and axis titles
+  # Remove axes, tick marks, and axis titles and adds a border
   theme(
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
-    axis.line = element_blank()
+    axis.line = element_blank(),
+    panel.border = element_rect(
+      colour = "black",
+      fill = NA,
+      linewidth = 0.8
+    )
   )
 
 gg_map
@@ -246,7 +251,7 @@ sk_map <-
     gg_inset,
     left   = 0.63,  # presumably left edge of inset?
     bottom = 0.00,  # 
-    right  = 1.00,  # flush with right side of plot
+    right  = 1.045,  # flush with right side of plot (have to overshoot slightly to align border lines)
     top    = 0.37,  # moving vertically (flush with top of plot - incremental adjustments make big diff. in latitude!)
     align_to = "panel",
     clip = FALSE) # make border visible
@@ -254,4 +259,4 @@ sk_map <-
 sk_map
 
 ##Save map
-ggsave("figures/SambaaKemap_basemap_NWTinset_20261021.png", plot = sk_map, width = 10, height = 8, dpi = 600)
+ggsave("figures/SambaaKemap_NWTinset_20261021.png", plot = sk_map, width = 10, height = 8, dpi = 600)
