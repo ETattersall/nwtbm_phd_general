@@ -348,6 +348,101 @@ write.csv(final_fire_stns, "data/nwtbm_sensor_ntems_fireseverity.csv")
 write.csv(final_fire_sites, "data/nwtbm_sites_ntems_fireseverity.csv")
 
 
+final_fire_stns <- read.csv("data/nwtbm_sensor_ntems_fireseverity.csv")
+final_fire_sites <- read.csv("data/nwtbm_sites_ntems_fireseverity.csv")
+
+glimpse(final_fire_stns)
+
+## Plot fire severity by study area (mean_severity and fsev_max_raw)
+
+## Faceted plot of mean fire severity
+firesev_mean <- final_fire_stns %>%
+  ggplot(aes(x = mean_severity)) +
+  geom_histogram(binwidth = 0.1, fill = "orange", color = "black") + ## Binned to 10 years to reduce gaps in data
+  facet_wrap(~ study_area) +
+  labs(title = "Mean Severity by Study Area",
+       x = "Mean Fire Severity",
+       y = "Count of Locations") +
+  theme_classic() + 
+  # increase size of title text, axis text, and facet titles
+  theme(plot.title = element_text(size = 24, face = "bold", hjust = 0.5)) +
+  theme(axis.title.x = element_text(size = 16)) +
+  theme(axis.title.y = element_text(size = 16)) +
+  theme(strip.text = element_text(size = 14)) # increase facet title size
+
+win.graph()
+firesev_mean
+## save
+ggsave("figures/fire_explore/mean_severity_station_500mbuffer_20261028.png", firesev_mean, width = 12, height = 8, dpi = 300)
+
+
+## Max severity (regardless of fire recency or size)
+firesev_max <- final_fire_stns %>%
+  ggplot(aes(x = fsev_max_raw)) +
+  geom_histogram(binwidth = 0.1, fill = "orange", color = "black") + ## Binned to 10 years to reduce gaps in data
+  facet_wrap(~ study_area) +
+  labs(title = "Max Severity by Study Area",
+       x = "Max Fire Severity",
+       y = "Count of Locations") +
+  theme_classic() + 
+  # increase size of title text, axis text, and facet titles
+  theme(plot.title = element_text(size = 24, face = "bold", hjust = 0.5)) +
+  theme(axis.title.x = element_text(size = 16)) +
+  theme(axis.title.y = element_text(size = 16)) +
+  theme(strip.text = element_text(size = 14)) # increase facet title size
+
+win.graph()
+firesev_max
+## save
+ggsave("figures/fire_explore/max_severity_raw_station_500mbuffer_20261028.png", firesev_max, width = 12, height = 8, dpi = 300)
+
+
+### Plot severity by year
+
+## Mean severity
+mean_sev_year <- ggplot(final_fire_stns,
+                 aes(x = fire_year, y = mean_severity, color = study_area)) +
+  geom_point(size = 3) +
+    labs(title = "Mean Severity by Year",
+         x = "Fire Year",
+         y = "Mean Severity") +
+    theme_classic() + 
+    # increase size of title text, axis text, and facet titles
+    theme(plot.title = element_text(size = 24, face = "bold", hjust = 0.5)) +
+    theme(axis.title.x = element_text(size = 20)) +
+    theme(axis.title.y = element_text(size = 20)) +
+  theme(axis.text = element_text(size = 16))
+
+
+
+win.graph()
+mean_sev_year
+
+## save
+ggsave("figures/fire_explore/mean_severity_byyear_station_500mbuffer_20261028.png", mean_sev_year, width = 12, height = 8, dpi = 300)
+  
+  
+## Max severity
+max_sev_year <- ggplot(final_fire_stns,
+                        aes(x = fire_year, y = fsev_max_raw, color = study_area)) +
+  geom_point(size = 3) +
+  labs(title = "Maximum Severity by Year",
+       x = "Fire Year",
+       y = "Maximum Severity") +
+  theme_classic() + 
+  # increase size of title text, axis text, and facet titles
+  theme(plot.title = element_text(size = 24, face = "bold", hjust = 0.5)) +
+  theme(axis.title.x = element_text(size = 20)) +
+  theme(axis.title.y = element_text(size = 20)) +
+  theme(axis.text = element_text(size = 16))
+
+win.graph()
+max_sev_year
+
+## save
+ggsave("figures/fire_explore/max_severity_raw_byyear_station_500mbuffer_20261028.png", max_sev_year, width = 12, height = 8, dpi = 300)
+
+
 #### UN SPIDER burn severity data ####
 ## Note: Likely will not use UN SPIDER burn severity data for more recent years. 
 ## Rationale - the dNBR values do not compare well with NTEMS severity metrics, 
