@@ -21,6 +21,8 @@ coordinates_df <- sensors |>
   rename("x" = "longitude", "y" = "latitude") |>
   select(x, y)
 
+glimpse(coordinates_df)
+
 
 # Returns a raster with Terrain Ruggedness Index from a given zoom
 # zoom corresponds to a ground resolution - see here: https://github.com/tilezen/joerd/blob/master/docs/data-sources.md#what-is-the-ground-resolution
